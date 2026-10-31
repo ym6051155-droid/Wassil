@@ -237,3 +237,5 @@ input:focus,select:focus{outline:2px solid var(--teal2);outline-offset:0;border-
 .qr-cell.on{background:#0f172a}
 .qr-real{display:flex;justify-content:center;margin:16px auto;padding:12px;background:#fff;border:1px solid var(--line);border-radius:16px;width:fit-content}
 .qr-real img,.qr-real canvas{display:block}
+
+.btn:disabled{opacity:.55;cursor:default}

@@ -36,7 +36,7 @@ const I18N = {
   welcome:{ar:'مرحباً بك في وصل',en:'Welcome to Wassil'},
   bankServices:{ar:'خدمات مصرفية',en:'Banking services'},
   tagline:{ar:'قروشك توصل... بساهلة',en:'Your money arrives... easily'},
-  demoNote:{ar:'نموذج تجريبي للتعلم — بيانات وهمية، ولا توجد أي أموال حقيقية.',en:'Learning demo only — fake data, no real money.'},
+  demoNote:{ar:'نموذج للتعلم — بيانات للتجربة، ولا توجد أي أموال حقيقية.',en:'Learning model only — trial data, no real money.'},
   fpUnavailable:{ar:'البصمة غير متاحة على هذا الجهاز/المتصفح — لا يمكن تسجيل الدخول بالبصمة هنا. سجّل الدخول بكلمة المرور كالمعتاد.',en:'Fingerprint is not available on this device/browser — fingerprint login is not possible here. Sign in with your password as usual.'},
   availableBalance:{ar:'الرصيد المتاح — الحساب الجاري',en:'Available balance — Current account'},
   fxLabel:{ar:'الحساب الأجنبي — بالدولار فقط',en:'FX account — USD only'},
@@ -45,7 +45,7 @@ const I18N = {
   showAll:{ar:'عرض الكل',en:'Show all'},
   myAccount:{ar:'حسابي',en:'My account'},
   bankServicesPage:{ar:'خدمات البنك',en:'Bank services'},
-  allServicesInOne:{ar:'كل وحدات وصل التجريبية في مكان واحد.',en:'All Wassil demo units in one place.'},
+  allServicesInOne:{ar:'كل وحدات وصل في مكان واحد.',en:'All Wassil units in one place.'},
   beneficiaries:{ar:'المستفيدون',en:'Beneficiaries'},
   demoClient:{ar:'عميل — وصل',en:'Client — Wassil'},
   statement:{ar:'كشف حساب',en:'Statement'},
@@ -70,7 +70,7 @@ const I18N = {
   totalOut:{ar:'إجمالي الصادر',en:'Total outbound'},
   opsCount:{ar:'عدد العمليات',en:'Operations count'},
   depositsTitle:{ar:'ودائع لأجل',en:'Term deposits'},
-  depositsIntro:{ar:'افتح وديعة وهمية من رصيدك بالجنيه. نسبة الأرباح السنوية تجريبية وتزداد حسب مبلغ الوديعة، وتُحسب الأرباح بالتناسب مع المدة:',en:'Open a demo deposit from your SDG balance. The annual demo profit rate rises with the deposit amount and is prorated by duration:'},
+  depositsIntro:{ar:'افتح وديعة من رصيدك بالجنيه. نسبة الأرباح السنوية تزداد حسب مبلغ الوديعة، وتُحسب الأرباح بالتناسب مع المدة:',en:'Open a deposit from your SDG balance. The annual profit rate rises with the deposit amount and is prorated by duration:'},
   openDeposit:{ar:'فتح الوديعة',en:'Open deposit'},
   myDeposits:{ar:'ودائعي',en:'My deposits'},
   fxIntro:{ar:'حسابك بالدولار الأمريكي (USD) فقط — له رقم حساب خاص يختلف عن رقم حسابك بالجنيه، ولا يظهر رصيده بالجنيه أبداً.',en:'Your US Dollar (USD) account only — it has its own account number, different from your SDG account, and its balance is never shown in SDG.'},
@@ -87,7 +87,7 @@ const I18N = {
   cardTransferIntro:{ar:'التحويل هنا من بطاقة إلى بطاقة فقط (لا إلى حساب بنكي)، والمبلغ بالدولار لأن أرصدة البطاقات بالدولار فقط.',en:'Transfers here are card-to-card only (not to a bank account), and the amount is in USD because card balances are USD only.'},
   reviewTopup:{ar:'مراجعة الشحن',en:'Review top-up'},
   reviewTransfer:{ar:'مراجعة التحويل',en:'Review transfer'},
-  cardsIntro:{ar:'بطاقات وهمية محفوظة — رصيد كل بطاقة بالدولار الأمريكي (USD) فقط، وتفاصيلها مخفية ومقفلة. افتح صفحة البطاقة، واضغط أيقونة العين لعرضها كاملة ونسخ رقمها.',en:'Saved demo cards — each card balance is in US Dollars (USD) only, and its details are hidden and locked. Open a card page and tap the eye icon to show its full details and copy its number.'},
+  cardsIntro:{ar:'بطاقات محفوظة — رصيد كل بطاقة بالدولار الأمريكي (USD) فقط، وتفاصيلها مخفية ومقفلة. افتح صفحة البطاقة، واضغط أيقونة العين لعرضها كاملة ونسخ رقمها.',en:'Saved cards — each card balance is in US Dollars (USD) only, and its details are hidden and locked. Open a card page and tap the eye icon to show its full details and copy its number.'},
   fpNoticeTitle:{ar:'البصمة لعرض التفاصيل',en:'Fingerprint for details'},
   newCardTitle:{ar:'طلب بطاقة فيزا كارت جديدة',en:'Request a new Visa Card'},
   newCardDesc:{ar:'بطاقة فيزا كارت برصيد بالدولار فقط، صالحة 5 سنوات من تاريخ الإصدار. سعر الإصدار يُخصم من حسابك بالجنيه عند الطلب، وهو غير مسترد عند إلغاء البطاقة.',en:'A Visa Card with a USD-only balance, valid for 5 years from issuance. The issuance fee is debited from your SDG account on request and is non-refundable if the card is cancelled.'},
@@ -100,7 +100,7 @@ const I18N = {
   cardHistoryTitle:{ar:'سجل معاملات البطاقة',en:'Card transaction history'},
   cancelCardBtn:{ar:'إلغاء البطاقة',en:'Cancel card'},
   transferTitle:{ar:'تحويل الأموال',en:'Money transfer'},
-  transferIntro:{ar:'تحويل تجريبي بين حسابات وصل المسجّلة — اختر مستخدماً مسجلاً أو اكتب رقم حسابه.',en:'Demo transfer between registered Wassil accounts — pick a registered user or type their account number.'},
+  transferIntro:{ar:'تحويل بين حسابات وصل المسجّلة — اختر مستخدماً مسجلاً أو اكتب رقم حسابه.',en:'Transfer between registered Wassil accounts — pick a registered user or type their account number.'},
   beneficiary:{ar:'المستفيد',en:'Beneficiary'},
   chooseUser:{ar:'— اختر مستخدماً مسجلاً —',en:'— Pick a registered user —'},
   otherAccount:{ar:'حساب آخر (اكتب الرقم)',en:'Other account (type the number)'},
@@ -114,7 +114,7 @@ const I18N = {
   amountUsd:{ar:'المبلغ (USD)',en:'Amount (USD)'},
   amountSdg:{ar:'المبلغ (ج.س)',en:'Amount (SDG)'},
   operationOnAccount:{ar:'عملية على حسابك',en:'Operation on your account'},
-  demoReceiptNote:{ar:'هذا إشعار تجريبي من وصل — العملية وهمية داخل النموذج التعليمي ولا تمثّل تحويلاً حقيقياً أو أموالاً حقيقية.',en:'This is a demo receipt from Wassil — the operation is fake inside the learning model and does not represent a real transfer or real money.'},
+  demoReceiptNote:{ar:'إشعار من وصل — العملية داخل النموذج التعليمي ولا تمثّل تحويلاً حقيقياً أو أموالاً حقيقية.',en:'Receipt from Wassil — the operation is inside the learning model and does not represent a real transfer or real money.'},
 };
 
 let lang = localStorage.getItem('wassil-lang') || 'ar';
@@ -304,7 +304,7 @@ function servicesView(){
     [IC.transfer, t('cardTransfer'), L('من بطاقة إلى بطاقة فقط — بالدولار', 'USD transfer between Wassil cards only'), "go('cardTransfer')"],
     [IC.bank, t('deposits'), L('أرباح سنوية 12%–30% حسب المبلغ والمدة', 'Term deposits from 24h to a year — 12% to 30% by amount'), "go('deposits')"],
     [IC.trend, t('invest'), L('عملات وذهب وأسهم بأسعار معلنة', 'Currencies, gold and stocks at announced prices'), "go('invest')"],
-    [IC.calc, t('loanCalc'), L('حاسبة أقساط افتراضية 10%', 'Demo instalment calculator at 10% — demo only'), "go('loan')"],
+    [IC.calc, t('loanCalc'), L('حاسبة أقساط 10%', 'Instalment calculator at 10%'), "go('loan')"],
     [IC.repeat, t('orders'), L('تحويلات متكررة مجدولة وهمياً', 'Saved recurring transfers that run automatically'), "go('orders')"],
     [IC.target, t('goals'), L('ادخر نحو هدفك خطوة بخطوة', 'Save towards a goal with a set amount and term'), "go('goals')"],
     [IC.chart, t('statement'), L('الوارد والصادر وكل العمليات', 'All your operations with reference and date'), "go('statement')"],
@@ -389,8 +389,7 @@ async function downloadStatementPdf(){
       c.fillStyle = '#0d7a5f'; c.fillRect(0, 0, W, 110);
       c.fillStyle = '#ffffff'; c.font = 'bold 30px sans-serif'; c.textAlign = 'start';
       c.fillText(lang === 'en' ? 'Wassil' : 'وصل', 28, 48);
-      c.font = '16px sans-serif'; c.fillText(lang === 'en' ? 'Account statement (demo)' : 'كشف حساب (تجريبي)', 28, 78);
-      c.textAlign = 'end'; c.fillStyle = '#ffd166'; c.font = 'bold 16px sans-serif'; c.fillText('تجريبي', W - 28, 48);
+      c.font = '16px sans-serif'; c.fillText(lang === 'en' ? 'Account statement' : 'كشف حساب', 28, 78);
       c.fillStyle = '#ffffff'; c.font = '14px sans-serif'; c.fillText(new Date().toLocaleDateString(), W - 28, 78);
       c.fillStyle = '#222222'; c.font = '16px sans-serif'; c.textAlign = 'start';
       c.fillText((lang === 'en' ? 'Account: ' : 'الحساب: ') + (me?.sdgAccount || ''), 28, 140);
@@ -406,7 +405,6 @@ async function downloadStatementPdf(){
         c.fillText(txAmount(tx), W - 28, y + 28);
       });
       c.fillStyle = '#666666'; c.font = '13px sans-serif'; c.textAlign = 'center';
-      c.fillText(lang === 'en' ? 'Demo only — not real money. / تجريبي فقط — ليس أموالاً حقيقية.' : 'تجريبي فقط — ليس أموالاً حقيقية.', W / 2, H - 30);
       c.fillText((lang === 'en' ? 'Page ' : 'صفحة ') + (pi + 1) + ' / ' + pages.length, W / 2, H - 10);
       const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.9));
       jpegs.push(new Uint8Array(await blob.arrayBuffer()));
@@ -673,7 +671,7 @@ function receiptView(){
   return `${backLink(t('backStatement'), 'statement')}
   <div class="page-title">${t('receiptTitle')}</div><p class="page-sub">${t('receiptSub')}</p>
   <div class="receipt" id="receiptCard">
-    <div class="receipt-head"><div class="receipt-logo">${WAVE}</div><div><div class="receipt-name">${brandName()}</div><div class="receipt-sub">${t('receiptTitle')}</div></div><span class="badge">تجريبي</span></div>
+    <div class="receipt-head"><div class="receipt-logo">${WAVE}</div><div><div class="receipt-name">${brandName()}</div><div class="receipt-sub">${t('receiptTitle')}</div></div></div>
     <div class="receipt-check"><span class="check-circle">✓</span><span class="pill-active">${lang === 'en' ? 'Completed' : 'مكتملة'}</span></div>
     <div class="receipt-amount ${neg ? 'neg' : 'pos'}">${esc(txAmount(tx))}</div>
     <div class="receipt-op">${t('operationOnAccount')}</div>
@@ -689,7 +687,7 @@ function receiptView(){
     ${detailRow(lang === 'en' ? 'Reference number' : 'الرقم المرجعي', esc(tx.ref || ''))}
     ${detailRow(lang === 'en' ? 'Operation status' : 'حالة العملية', lang === 'en' ? 'Completed' : 'مكتملة')}
     <div class="qr-block"><div class="qr-real" data-qr="${esc(window.location.origin + '/?ref=' + encodeURIComponent(tx.ref || String(tx.id)))}" data-qr-size="180"></div>
-    <p class="muted" style="text-align:center;margin:8px 0 0">${t('demoReceiptNote')}</p></div>
+</div>
   </div>
   <button class="btn" onclick="downloadReceipt()">↓ ${t('downloadReceipt')}</button>
   <button class="btn-outline" onclick="go('statement')">${t('backStatement')}</button>`;
@@ -773,7 +771,7 @@ function policiesView(){
     lang === 'en' ? 'Welcome bonus: 15,000 SDG on activation of your first account per device. Invite bonus: 50,000 SDG for the new account that enters a valid invite code (WSL + the inviter\'s SDG account, e.g. WSL1002) at activation — once per account and once per device. The inviter gets nothing extra. An invalid code still activates without the invite bonus.' : 'المكافأة الترحيبية: ١٥٬٠٠٠ ج.س عند تفعيل أول حساب من كل جهاز. مكافأة الدعوة: ٥٠٬٠٠٠ ج.س للحساب الجديد الذي يكتب رمز دعوة صحيح (WSL + رقم حساب الداعي بالجنيه، مثلاً WSL1002) عند التفعيل — مرة واحدة للحساب ومرة واحدة للجهاز. الداعي لا يأخذ شيئاً إضافياً. الرمز غير الصحيح يفعّل الحساب من غير مكافأة الدعوة.')}
   ${sec(lang === 'en' ? '7 — Admin, freeze and ban' : '٧ — الأدمن والتجميد والحظر',
     lang === 'en' ? 'The admin account is not an ordinary user account: it cannot transfer, pay bills or hold cards. It funds user accounts in SDG and USD (unlimited), freezes a specific amount or all assets, unbans only with admin approval, bans users, and stops or restarts user cards. A banned account cannot log in; a frozen amount cannot be spent until the admin releases it. Fingerprint login is real device biometrics (WebAuthn) enrolled after password login; password login always remains as fallback.' : 'حساب الأدمن ليس حساب مستخدم عادياً: لا يحوّل ولا يدفع فواتير ولا يملك بطاقات. يموّل حسابات المستخدمين بالجنيه والدولار (من غير حد)، ويجمّد مبلغاً معيناً أو كل الأصول، ولا يُعاد فتح الحساب إلا بموافقة الأدمن، ويحظر المستخدمين، ويوقف بطاقاتهم أو يعيد تشغيلها. الحساب المحظور لا يستطيع الدخول، والمبلغ المجمّد لا يُصرف حتى يفكّه الأدمن. دخول البصمة بصمة جهاز حقيقية (WebAuthn) تُسجّل بعد دخول كلمة المرور؛ ودخول كلمة المرور يبقى دائماً كبديل.')}
-  <button class="btn" onclick="agreePolicy()">${agreed ? (lang === 'en' ? 'Already agreed — continue' : 'تمت الموافقة سابقاً — متابعة') : (lang === 'en' ? 'I agree to the site policy' : 'موافق على سياسة الموقع')}</button>
+  ${agreed ? `<button class="btn" onclick="agreePolicy()">${lang === 'en' ? 'Already agreed — continue' : 'تمت الموافقة سابقاً — متابعة'}</button>` : `<p class="muted" id="policy-timer">${lang === 'en' ? 'Read the policy — the agree button activates after 10 seconds.' : 'اقرأ السياسة — زر الموافقة يتفعل بعد 10 ثواني.'}</p><button class="btn" id="policy-agree-btn" disabled onclick="agreePolicy()"><span id="policy-check" style="opacity:.35">○</span> ${lang === 'en' ? 'I agree to the site policy' : 'موافق على سياسة الموقع'}</button>`}
   <p class="muted">${lang === 'en' ? 'Agreeing means you understood this is a demo with fake money, not a real bank.' : 'الموافقة تعني أنك فهمت أن هذا نموذج تجريبي بأموال وهمية، وليس بنكاً حقيقياً.'}</p>`;
 }
 function agreePolicy(){
@@ -824,6 +822,25 @@ function render(){
   const logged = !!me && view !== 'login' && view !== 'signup';
   if (logged) html = userbar() + html;
   app().innerHTML = html;
+  // Policy reading timer: the agree button stays disabled for 10 seconds
+  // of reading, then the check icon activates and agreement becomes possible.
+  if (window._policyTimer) { clearInterval(window._policyTimer); window._policyTimer = null; }
+  if (view === 'policies' && localStorage.getItem('wassil-policy-agreed') !== '1') {
+    let left = 10;
+    const tick = () => {
+      const btn = document.getElementById('policy-agree-btn'); const tm = document.getElementById('policy-timer'); const ck = document.getElementById('policy-check');
+      if (!btn || !tm) { clearInterval(window._policyTimer); window._policyTimer = null; return; }
+      if (left <= 0) {
+        btn.disabled = false;
+        if (ck) { ck.textContent = '✓'; ck.style.opacity = '1'; ck.style.color = '#16a34a'; }
+        tm.textContent = lang === 'en' ? 'You can now agree to the site policy.' : 'يمكنك الآن الموافقة على سياسة الموقع.';
+        clearInterval(window._policyTimer); window._policyTimer = null; return;
+      }
+      tm.textContent = lang === 'en' ? 'Read the policy — the agree button activates in ' + left + ' seconds.' : 'اقرأ السياسة — زر الموافقة يتفعل بعد ' + left + ' ثواني.';
+      left--;
+    };
+    tick(); window._policyTimer = setInterval(tick, 1000);
+  }
   const nav = document.getElementById('bottomNav');
   if (nav) {
     nav.classList.toggle('hidden', !logged);
@@ -1030,12 +1047,11 @@ function downloadReceipt(){
   x.fillStyle = '#ffffff'; x.fillRect(0,0,900,1100);
   x.fillStyle = '#0f766e'; x.fillRect(0,0,900,140);
   x.fillStyle = '#ffffff'; x.font = 'bold 44px sans-serif'; x.fillText(brandName(), 40, 85);
-  x.fillStyle = '#f59e0b'; x.fillRect(700, 45, 150, 50); x.fillStyle = '#111827'; x.font = 'bold 26px sans-serif'; x.fillText('تجريبي', 735, 80);
   x.fillStyle = '#111827'; x.font = '28px sans-serif';
   const rows = [[ 'Type / النوع', txTitle(tx)], ['Amount / المبلغ', txAmount(tx)], ['From / من', (tx.fromName||'')+' — '+(tx.fromAccount||'')], ['To / إلى', (tx.toName||'')+' — '+(tx.toAccount||'')], ['Date / التاريخ', new Date(tx.createdAt).toLocaleString()], ['Reference / المرجع', tx.ref||''], ['Status / الحالة', 'completed / مكتملة']];
   let y = 210;
   for (const [k,v] of rows) { x.fillText(k, 40, y); x.fillText(String(v), 40, y+38); y += 95; }
-  x.font = '22px sans-serif'; x.fillStyle = '#6b7280'; x.fillText('Demo receipt — تجريبي فقط، ليس تحويلاً حقيقياً.', 40, y+20);
+  x.font = '22px sans-serif'; x.fillStyle = '#6b7280'; x.fillText('Wassil receipt — إشعار من وصل.', 40, y+20);
   c.toBlob((blob) => {
     if (!blob) { alert('Download failed / فشل التحميل'); return; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wassil-receipt-' + (tx.ref || tx.id) + '.png'; a.click();
