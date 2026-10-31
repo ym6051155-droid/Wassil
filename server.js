@@ -21,10 +21,16 @@ const ASSETS = [
   { id: 'USD', nameAr: 'دولار أمريكي', nameEn: 'US Dollar', category: 'currency', priceSdg: 10000, unitAr: 'دولار', unitEn: 'USD' },
   { id: 'EUR', nameAr: 'يورو', nameEn: 'Euro', category: 'currency', priceSdg: 10850, unitAr: 'يورو', unitEn: 'EUR' },
   { id: 'AED', nameAr: 'درهم إماراتي', nameEn: 'UAE Dirham', category: 'currency', priceSdg: 2720, unitAr: 'درهم', unitEn: 'AED' },
+  { id: 'SAR', nameAr: 'ريال سعودي', nameEn: 'Saudi Riyal', category: 'currency', priceSdg: 2670, unitAr: 'ريال', unitEn: 'SAR' },
+  { id: 'GBP', nameAr: 'جنيه إسترليني', nameEn: 'British Pound', category: 'currency', priceSdg: 13500, unitAr: 'جنيه', unitEn: 'GBP' },
+  { id: 'EGP', nameAr: 'جنيه مصري', nameEn: 'Egyptian Pound', category: 'currency', priceSdg: 210, unitAr: 'جنيه', unitEn: 'EGP' },
   { id: 'GOLD', nameAr: 'ذهب', nameEn: 'Gold', category: 'gold', priceSdg: 1010000, unitAr: 'غرام', unitEn: 'gram' },
   { id: 'STK-A', nameAr: 'شركة النيل للتجارة', nameEn: 'Nile Trading Company', category: 'stock', priceSdg: 2500, unitAr: 'سهم', unitEn: 'share' },
   { id: 'STK-B', nameAr: 'شركة الخرطوم للصناعات', nameEn: 'Khartoum Industries Company', category: 'stock', priceSdg: 4000, unitAr: 'سهم', unitEn: 'share' },
   { id: 'STK-C', nameAr: 'شركة الصحراء للطاقة', nameEn: 'Sahara Energy Company', category: 'stock', priceSdg: 1750, unitAr: 'سهم', unitEn: 'share' },
+  { id: 'STK-D', nameAr: 'شركة البحر الأحمر للتجارة', nameEn: 'Red Sea Trading Company', category: 'stock', priceSdg: 3200, unitAr: 'سهم', unitEn: 'share' },
+  { id: 'STK-E', nameAr: 'شركة النخيل للزراعة', nameEn: 'Palm Agriculture Company', category: 'stock', priceSdg: 2800, unitAr: 'سهم', unitEn: 'share' },
+  { id: 'STK-F', nameAr: 'شركة النور للاتصالات', nameEn: 'Al-Noor Telecom Company', category: 'stock', priceSdg: 6100, unitAr: 'سهم', unitEn: 'share' },
 ];
 
 const BILLS = [
@@ -706,15 +712,21 @@ async function handle(req, res) {
       const d = db();
       if (!d.investPrices) { d.investPrices = {}; ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); }
       if (!d.priceLastTick) d.priceLastTick = Date.now();
-      return ASSETS.map(a => ({ ...a, basePriceSdg: a.priceSdg, priceSdg: d.investPrices[a.id] }));
+      return ASSETS.map(a => ({ ...a, basePriceSdg: a.priceSdg, priceSdg: d.investPrices[a.id] ?? a.priceSdg }));
     }
     function tickPrices(){
       const d = db();
       if (!d.investPrices) { d.investPrices = {}; ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); }
-      // Base prices changed (e.g. gold repriced): reset live prices to the new bases once,
-      // so old prices are not clamped into the new range mid-flight. Movement resumes from the new bases.
-      const basesKey = ASSETS.map(a => a.id + ':' + a.priceSdg).join(',');
-      if (d.investBases !== basesKey) { ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); d.investBases = basesKey; d.priceLastTick = Date.now(); save(); return; }
+      // Per-asset base tracking: only (re)initialise assets whose base price changed or are new.
+      // Existing live prices are preserved, so adding assets never wipes accumulated movement.
+      // (Older deploys stored bases as a joined string; parse it into the same map shape.)
+      let bases = d.investBases;
+      if (typeof bases === 'string') { const m = {}; bases.split(',').forEach(part => { const i = part.lastIndexOf(':'); if (i > 0) m[part.slice(0, i)] = Number(part.slice(i + 1)); }); bases = m; }
+      if (!bases || typeof bases !== 'object') bases = {};
+      let basesChanged = false;
+      ASSETS.forEach(a => { if (bases[a.id] !== a.priceSdg) { d.investPrices[a.id] = a.priceSdg; bases[a.id] = a.priceSdg; basesChanged = true; } });
+      d.investBases = bases;
+      if (basesChanged) save();
       if (!d.priceLastTick) { d.priceLastTick = Date.now(); save(); return; }
       const steps = Math.min(Math.floor((Date.now() - d.priceLastTick) / PRICE_TICK_MS), PRICE_MAX_STEPS);
       if (steps <= 0) return;
