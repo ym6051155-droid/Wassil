@@ -33,18 +33,116 @@ const I18N = {
   fingerprintLogin:{ar:'تسجيل الدخول بالبصمة',en:'Fingerprint login'},
   enableFingerprint:{ar:'تفعيل الدخول بالبصمة',en:'Enable fingerprint login'},
   disableFingerprint:{ar:'إلغاء تفعيل البصمة',en:'Disable fingerprint login'},
+  welcome:{ar:'مرحباً بك في وصل',en:'Welcome to Wassil'},
+  bankServices:{ar:'خدمات مصرفية تجريبية',en:'Demo banking services'},
+  tagline:{ar:'قروشك توصل... بساهلة',en:'Your money arrives... easily'},
+  demoNote:{ar:'نموذج تجريبي للتعلم — بيانات وهمية، ولا توجد أي أموال حقيقية.',en:'Learning demo only — fake data, no real money.'},
+  fpUnavailable:{ar:'البصمة غير متاحة على هذا الجهاز/المتصفح — لا يمكن تسجيل الدخول بالبصمة هنا. سجّل الدخول بكلمة المرور كالمعتاد.',en:'Fingerprint is not available on this device/browser — fingerprint login is not possible here. Sign in with your password as usual.'},
+  availableBalance:{ar:'الرصيد المتاح — الحساب الجاري',en:'Available balance — Current account'},
+  fxLabel:{ar:'الحساب الأجنبي — بالدولار فقط',en:'FX account — USD only'},
+  cardsBalance:{ar:'رصيد بطاقاتك',en:'Your cards balance'},
+  latestOps:{ar:'آخر العمليات',en:'Latest operations'},
+  showAll:{ar:'عرض الكل',en:'Show all'},
+  myAccount:{ar:'حسابي',en:'My account'},
+  bankServicesPage:{ar:'خدمات البنك',en:'Bank services'},
+  allServicesInOne:{ar:'كل وحدات وصل التجريبية في مكان واحد.',en:'All Wassil demo units in one place.'},
+  beneficiaries:{ar:'المستفيدون',en:'Beneficiaries'},
+  demoClient:{ar:'عميل تجريبي — وصل',en:'Demo client — Wassil'},
+  statement:{ar:'كشف حساب',en:'Statement'},
+  qrShare:{ar:'شارك رمز وصل التجريبي',en:'Share Wassil demo code'},
+  cannotLogin:{ar:'لا تستطيع تسجيل الدخول؟',en:"Can't sign in?"},
+  newSignup:{ar:'تسجيل جديد؟',en:'New sign up?'},
+  about:{ar:'عن وصل',en:'About Wassil'},
+  locations:{ar:'مواقعنا',en:'Our locations'},
+  support:{ar:'المساعدة',en:'Help'},
+  active:{ar:'مفعّل',en:'Active'},
+  loanCalc:{ar:'محاكاة تمويل',en:'Loan simulator'},
+  qrNote:{ar:'رمز عرض تجريبي فقط — لا يُمسح لتحويل حقيقي.',en:'Display-only demo code — it does not scan for a real transfer.'},
+  backHome:{ar:'رجوع للرئيسية',en:'Back to home'},
+  backServices:{ar:'رجوع للخدمات',en:'Back to services'},
+  backCards:{ar:'رجوع لبطاقاتي',en:'Back to my cards'},
+  backStatement:{ar:'رجوع إلى السجل',en:'Back to statement'},
+  receiptTitle:{ar:'إشعار العملية',en:'Transaction receipt'},
+  receiptSub:{ar:'صورة إشعار كاملة لعملية التحويل أو العملية المحددة — بكل تفاصيلها كما سجّلتها في وصل.',en:'A full receipt image for the selected transfer or operation, with every detail as recorded in Wassil.'},
+  statementSub:{ar:'ملخص عمليات حسابك المحفوظ.',en:'A summary of your saved account operations.'},
+  downloadText:{ar:'تنزيل الكشف كنص',en:'Download statement as text'},
+  totalIn:{ar:'إجمالي الوارد',en:'Total inbound'},
+  totalOut:{ar:'إجمالي الصادر',en:'Total outbound'},
+  opsCount:{ar:'عدد العمليات',en:'Operations count'},
+  depositsTitle:{ar:'ودائع لأجل',en:'Term deposits'},
+  depositsIntro:{ar:'افتح وديعة وهمية من رصيدك بالجنيه. نسبة الأرباح السنوية تجريبية وتزداد حسب مبلغ الوديعة، وتُحسب الأرباح بالتناسب مع المدة:',en:'Open a demo deposit from your SDG balance. The annual demo profit rate rises with the deposit amount and is prorated by duration:'},
+  openDeposit:{ar:'فتح الوديعة',en:'Open deposit'},
+  myDeposits:{ar:'ودائعي',en:'My deposits'},
+  fxIntro:{ar:'حسابك بالدولار الأمريكي (USD) فقط — له رقم حساب خاص يختلف عن رقم حسابك بالجنيه، ولا يظهر رصيده بالجنيه أبداً.',en:'Your US Dollar (USD) account only — it has its own account number, different from your SDG account, and its balance is never shown in SDG.'},
+  fxDetails:{ar:'تفاصيل الحساب الأجنبي',en:'FX account details'},
+  fundFxShort:{ar:'شحن الحساب الأجنبي',en:'Fund FX account'},
+  fxTransferShort:{ar:'تحويل من الحساب الأجنبي',en:'FX transfer'},
+  topupFromFx:{ar:'شحن بطاقة من الأجنبي',en:'Top up card from FX'},
+  registeredUsers:{ar:'المستخدمون المسجلون',en:'Registered users'},
+  savedBeneficiaries:{ar:'المستفيدون المحفوظون',en:'Saved beneficiaries'},
+  fxHistory:{ar:'سجل الحساب الأجنبي',en:'FX account history'},
+  cardTopupTitle:{ar:'شحن البطاقة من الحساب الأجنبي',en:'Top up card from FX account'},
+  cardTopupIntro:{ar:'البطاقة تُشحن من حسابك الأجنبي فقط، والمبلغ بالدولار: ينقص حسابك الأجنبي ويزيد رصيد بطاقتك بالدولار — رصيد البطاقة بالدولار فقط، ولا تُشحن من حساب الجنيه مباشرة.',en:'A card is topped up from your FX account only, in USD: your FX account decreases and your card balance in USD increases — card balances are USD only and are never topped up directly from the SDG account.'},
+  cardTransferTitle:{ar:'تحويل من بطاقة إلى بطاقة',en:'Card-to-card transfer'},
+  cardTransferIntro:{ar:'التحويل هنا من بطاقة إلى بطاقة فقط (لا إلى حساب بنكي)، والمبلغ بالدولار لأن أرصدة البطاقات بالدولار فقط.',en:'Transfers here are card-to-card only (not to a bank account), and the amount is in USD because card balances are USD only.'},
+  reviewTopup:{ar:'مراجعة الشحن',en:'Review top-up'},
+  reviewTransfer:{ar:'مراجعة التحويل',en:'Review transfer'},
+  cardsIntro:{ar:'بطاقات وهمية محفوظة — رصيد كل بطاقة بالدولار الأمريكي (USD) فقط، وتفاصيلها مخفية ومقفلة. افتح صفحة البطاقة، واضغط أيقونة العين لعرضها كاملة ونسخ رقمها.',en:'Saved demo cards — each card balance is in US Dollars (USD) only, and its details are hidden and locked. Open a card page and tap the eye icon to show its full details and copy its number.'},
+  fpNoticeTitle:{ar:'البصمة لعرض التفاصيل',en:'Fingerprint for details'},
+  newCardTitle:{ar:'طلب بطاقة فيزا كارت جديدة',en:'Request a new Visa Card'},
+  newCardDesc:{ar:'بطاقة فيزا كارت برصيد بالدولار فقط، صالحة 5 سنوات من تاريخ الإصدار. سعر الإصدار يُخصم من حسابك بالجنيه عند الطلب، وهو غير مسترد عند إلغاء البطاقة.',en:'A Visa Card with a USD-only balance, valid for 5 years from issuance. The issuance fee is debited from your SDG account on request and is non-refundable if the card is cancelled.'},
+  issueFee:{ar:'سعر الإصدار',en:'Issuance fee'},
+  validity:{ar:'الصلاحية',en:'Validity'},
+  yourBalance:{ar:'رصيد حسابك',en:'Your balance'},
+  activeCards:{ar:'بطاقاتك النشطة',en:'Your active cards'},
+  cardPageTitle:{ar:'صفحة البطاقة',en:'Card page'},
+  cardOptions:{ar:'خيارات البطاقة',en:'Card options'},
+  cardHistoryTitle:{ar:'سجل معاملات البطاقة',en:'Card transaction history'},
+  cancelCardBtn:{ar:'إلغاء البطاقة',en:'Cancel card'},
+  transferTitle:{ar:'تحويل الأموال',en:'Money transfer'},
+  transferIntro:{ar:'تحويل تجريبي بين حسابات وصل المسجّلة — اختر مستخدماً مسجلاً أو اكتب رقم حسابه.',en:'Demo transfer between registered Wassil accounts — pick a registered user or type their account number.'},
+  beneficiary:{ar:'المستفيد',en:'Beneficiary'},
+  chooseUser:{ar:'— اختر مستخدماً مسجلاً —',en:'— Pick a registered user —'},
+  otherAccount:{ar:'حساب آخر (اكتب الرقم)',en:'Other account (type the number)'},
+  sourceBalance:{ar:'رصيد بطاقة المصدر',en:'Source card balance'},
+  recipientCard:{ar:'رقم بطاقة المستلم الكامل',en:'Recipient full card number'},
+  noteOptional:{ar:'ملاحظة (اختياري)',en:'Note (optional)'},
+  sourceCard:{ar:'بطاقتك (المصدر)',en:'Your card (source)'},
+  topupSource:{ar:'مصدر الشحن',en:'Top-up source'},
+  cardToTopup:{ar:'البطاقة المراد شحنها',en:'Card to top up'},
+  topupAmount:{ar:'مبلغ الشحن (USD)',en:'Top-up amount (USD)'},
+  amountUsd:{ar:'المبلغ (USD)',en:'Amount (USD)'},
+  amountSdg:{ar:'المبلغ (ج.س)',en:'Amount (SDG)'},
+  operationOnAccount:{ar:'عملية على حسابك',en:'Operation on your account'},
+  demoReceiptNote:{ar:'هذا إشعار تجريبي من وصل — العملية وهمية داخل النموذج التعليمي ولا تمثّل تحويلاً حقيقياً أو أموالاً حقيقية.',en:'This is a demo receipt from Wassil — the operation is fake inside the learning model and does not represent a real transfer or real money.'},
 };
+
 let lang = localStorage.getItem('wassil-lang') || 'ar';
 let token = localStorage.getItem('wassil-token') || '';
 let me = null;
 let view = 'login';
 let selCard = null, selTx = null, dash = null;
+let transferTab = 'users', fxAction = 'fund', ctCardId = null, ccFromId = null;
+function backLink(label, v){ return `<button type="button" class="back-link" onclick="go('${v}')">${esc(label)} ›</button>`; }
+function detailRow(label, value){ return `<div class="detail-row"><span class="detail-label">${esc(label)}</span><b class="detail-value">${value}</b></div>`; }
+function qrCells(seed){
+  let cells = '';
+  for (let i = 0; i < 441; i++) { const ch = (seed || '').charCodeAt(i % Math.max(1, (seed || '').length)) || 0; const on = ((ch * (i + 7)) % 3) !== 0; cells += `<span class="qr-cell ${on ? 'on' : ''}"></span>`; }
+  return cells;
+}
+function durationLabel(days){
+  const d = Number(days);
+  return lang === 'en'
+    ? ({1:'24 hours (1 day)',7:'Week (7 days)',30:'Month (30 days)',90:'3 months (90 days)',180:'6 months (180 days)',365:'Year (365 days)'})[d] || (d + ' days')
+    : ({1:'24 ساعة (يوم واحد)',7:'أسبوع (7 أيام)',30:'شهر (30 يوماً)',90:'3 أشهر (90 يوماً)',180:'6 أشهر (180 يوماً)',365:'سنة (365 يوماً)'})[d] || (d + ' يوم');
+}
+function statusLabel(s){ if (s === 'active') return lang === 'en' ? 'Active' : 'نشطة'; if (s === 'frozen') return lang === 'en' ? 'Frozen' : 'مجمّدة'; return esc(s || ''); }
 const $ = (s) => document.querySelector(s);
 const app = () => document.getElementById('app');
 function t(k){ const v = I18N[k]; return v ? (lang === 'en' ? v.en : v.ar) : k; }
 function nameOf(u){ return lang === 'en' && u && u.fullNameEn ? u.fullNameEn : (u ? u.fullNameAr : ''); }
 function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'), 3000); }
-function setLang(l){ lang = l; localStorage.setItem('wassil-lang', l); document.documentElement.lang = l; document.documentElement.dir = l === 'en' ? 'ltr' : 'rtl'; $('#langBtn').textContent = l === 'en' ? 'عربي' : 'EN'; render(); }
+function setLang(l){ lang = l; localStorage.setItem('wassil-lang', l); document.documentElement.lang = l; document.documentElement.dir = l === 'en' ? 'ltr' : 'rtl'; const lb = $('#langBtn'); if (lb) lb.textContent = l === 'en' ? 'عربي' : 'EN'; render(); }
 async function api(path, opts={}) {
   const r = await fetch(path, { ...opts, headers: { 'Content-Type':'application/json', ...(token?{Authorization:'Bearer '+token}:{}), ...(opts.headers||{}) } });
   const j = await r.json().catch(()=>({}));
@@ -61,107 +159,365 @@ function txAmount(tx){
 }
 function go(v){ view = v; render(); }
 async function loadDash(){ try { dash = await api('/api/dashboard'); me = dash.user; } catch { me = null; } }
+let showBal = true;
+function toggleBal(){ showBal = !showBal; render(); }
+function toggleLang(){ setLang(lang === 'en' ? 'ar' : 'en'); }
+const IC = {
+  transfer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"/><path d="M14 6l6 6-6 6"/></svg>',
+  receipt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  qr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14h-3"/></svg>',
+  card:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>',
+  bank:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M4 10v9M20 10v9M8 14v5M16 14v5M2 19h20"/></svg>',
+  dollar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9.5c0-1.4-1.3-2-3-2s-3 .7-3 2c0 3 6 1 6 4 0 1.3-1.3 2-3 2s-3-.6-3-2"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10 20a2 2 0 004 0"/></svg>',
+  logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>',
+  eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+  mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7v.5"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  headset:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0116 0"/><rect x="3" y="13" width="4" height="6" rx="2"/><rect x="17" y="13" width="4" height="6" rx="2"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19c1-3 3.5-4.5 6.5-4.5s5.5 1.5 6.5 4.5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5c2.5.3 4.5 1.6 5.5 4"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',
+  target:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+  repeat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>',
+  trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
+  calc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h2M8 15h2M12 15h2M16 15h2M8 19h2M12 19h2M16 19h2"/></svg>',
+};
+const WAVE = '<svg viewBox="0 0 64 64" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 30c6-7 12-7 18 0s12 7 18 0" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity=".85"/><path d="M10 44c6-7 12-7 18 0s12 7 18 0" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/><circle cx="48" cy="14" r="5" fill="#ffffff"/></svg>';
+function userbar(){
+  const n = (dash?.transactions || []).length;
+  const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
+  return `<div class="userbar"><div class="userbar-main"><div class="avatar">${esc(letter)}</div><div style="min-width:0"><div class="welcome">${t('welcome')} <span class="badge-outline">تجريبي</span></div><div class="user-name">${esc(nameOf(me))}</div></div></div>
+  <div class="userbar-actions"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><button type="button" class="icon-pill" aria-label="${t('notifications')}" onclick="go('statement')">${IC.bell}${n ? `<span class="bell-dot">${n > 99 ? '99+' : n}</span>` : ''}</button><button type="button" class="icon-pill" aria-label="${t('logout')}" onclick="doLogout()">${IC.logout}</button></div></div>`;
+}
+function opRow(tx){
+  const neg = (tx.currency === 'USD' ? (tx.amountUsdCents || 0) : (tx.amountSdg || 0)) < 0;
+  const d = new Date(tx.createdAt);
+  const dt = isNaN(d) ? '' : d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return `<button type="button" class="op-row" onclick="openTx(${tx.id})"><span class="op-ic ${neg ? 'up' : 'down'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 ${neg ? '19' : '5'}V${neg ? '5' : '19'}"/><path d="M5 12l7 ${neg ? '-7' : '7'} 7 ${neg ? '7' : '-7'}"/></svg></span><span class="op-main"><span class="op-title" style="display:block">${esc(txTitle(tx))}</span><span class="op-meta" style="display:block">${dt} · ${esc(tx.ref || '')}</span></span><span class="op-amt ${neg ? 'neg' : 'pos'}">${esc(txAmount(tx))}</span></button>`;
+}
+function fmtDate(x){ const d = new Date(x); return isNaN(d) ? '' : d.toLocaleDateString('en-GB'); }
+
 
 // ---------- views ----------
 function loginView(){
-  return `<div class="auth-hero"><div class="auth-logo">و</div><div class="auth-name">وصل <span style="font-size:15px;opacity:.75">Wassil</span></div><div class="auth-tag">تجريبي — Demo only</div></div><div class="card"><h2>${t('login')}</h2>
-  <p class="muted">تجريبي — Demo only. No real email is sent and no real money moves.</p>
-  <label>${t('email')}</label><input id="li-email" type="email">
-  <label>${t('password')}</label><input id="li-pass" type="password">
+  const fp = window.PublicKeyCredential
+    ? `<button class="btn secondary" id="fpLoginBtn" onclick="doFpLogin()">${t('fingerprintLogin')}</button>`
+    : `<div class="notice-amber">${t('fpUnavailable')}</div>`;
+  return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
+  <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">وصّل</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
+  <div class="auth-card"><h2>${t('login')}</h2>
+  <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="li-email" type="email" placeholder="name@example.com"></div>
+  <label>${t('password')}</label><div class="input-wrap">${IC.lock}<input id="li-pass" type="password"><button type="button" class="eye-btn" onclick="const e=document.getElementById('li-pass');e.type=e.type==='password'?'text':'password';">${IC.eye}</button></div>
   <button class="btn" onclick="doLogin()">${t('login')}</button>
-  <button class="btn secondary" id="fpLoginBtn" onclick="doFpLogin()">${t('fingerprintLogin')}</button>
+  <div class="divider-or">${lang === 'en' ? 'or' : 'أو'}</div>
+  ${fp}
   <div id="li-err" class="err"></div>
-  <button class="btn secondary" onclick="go('signup')">${t('signup')}</button></div>`;
+  <button type="button" class="qr-btn" onclick="go('qr')">${IC.qr} ${t('qrShare')}</button>
+  <div class="link-row"><button type="button" onclick="go('signup')">${t('newSignup')}</button><button type="button" onclick="go('faq')">${t('cannotLogin')}</button></div></div>
+  <div class="auth-footer"><div>${t('demoNote')}</div><div class="auth-links">
+  <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.info}</span>${t('about')}</button>
+  <button type="button" class="auth-link" onclick="go('branches')"><span class="auth-link-ic">${IC.pin}</span>${t('locations')}</button>
+  <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.headset}</span>${t('support')}</button></div></div></div>`;
 }
 function signupView(){
-  return `<div class="auth-hero"><div class="auth-logo">و</div><div class="auth-name">وصل <span style="font-size:15px;opacity:.75">Wassil</span></div><div class="auth-tag">تجريبي — Demo only</div></div><div class="card"><h2>${t('signup')}</h2>
+  return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
+  <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">وصّل</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
+  <div class="auth-card"><h2>${t('signup')}</h2>
   <p class="muted">كود التفعيل تجريبي يظهر داخل التطبيق — لم يُرسل أي بريد حقيقي. / Demo activation code is shown in-app — no real email is sent.</p>
-  <label>${t('email')}</label><input id="su-email" type="email">
+  <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="su-email" type="email"></div>
   <label>${t('nameAr')}</label><input id="su-ar">
   <label>${t('nameEn')}</label><input id="su-en">
-  <label>${t('password')}</label><input id="su-pass" type="password">
+  <label>${t('password')}</label><div class="input-wrap">${IC.lock}<input id="su-pass" type="password"></div>
   <button class="btn" onclick="doSignup()">${t('signup')}</button>
   <div id="su-err" class="err"></div><div id="su-ok" class="ok"></div>
   <div id="su-activate" class="hidden"><label>Activation code / كود التفعيل</label><input id="su-code"><button class="btn" onclick="doActivate()">${t('confirm')}</button></div>
-  <button class="btn secondary" onclick="go('login')">${t('login')}</button></div>`;
+  <div class="link-row"><button type="button" onclick="go('login')">${t('login')}</button></div></div>
+  <div class="auth-footer"><div>${t('demoNote')}</div></div></div>`;
 }
 function homeView(){
   if (!me) return loginView();
-  const rows = (dash?.transactions || []).slice(0, 10).map(tx =>
-    `<div class="row" onclick="openTx(${tx.id})"><span>${esc(txTitle(tx))}</span><b>${esc(txAmount(tx))}</b></div>`).join('') || `<p class="muted">—</p>`;
-  return `<div class="balance"><div class="acct-label">${nameOf(me)} — ${t('home')}</div><div class="big">${moneySdg(me.sdgBalance)}</div>
+  const txs = dash?.transactions || [];
+  const rows = txs.slice(0, 10).map(opRow).join('') || `<p class="muted">—</p>`;
+  const cardsTotal = (dash?.cards || []).reduce((a, c) => a + (c.balanceCents || 0), 0);
+  const nCards = (dash?.cards || []).length;
+  return `<div class="balance"><div class="balance-top"><span>${t('availableBalance')}</span><button type="button" onclick="toggleBal()" aria-label="toggle balance">${IC.eye}</button></div>
+  <div class="big">${showBal ? moneySdg(me.sdgBalance) : '••••••••'}</div>
   <div class="acct-num">${me.sdgAccount || ''}</div></div>
-  <div class="fx-card" onclick="go('fx')"><div><div class="fx-label">${t('fx')}</div><div class="fx-num">${me.fxAccount || ''}</div></div><div style="text-align:end"><div class="fx-amount">${moneyUsd(me.fxBalanceCents)}</div><div class="fx-label">›</div></div></div>
-  <div class="card"><h2>${t('services')}</h2><div class="grid">
-    <div class="icon-btn" onclick="go('transfer')">💸<br>${t('transfer')}</div>
-    <div class="icon-btn" onclick="go('cards')">💳<br>${t('cards')}</div>
-    <div class="icon-btn" onclick="go('deposits')">🏦<br>${t('deposits')}</div>
-    <div class="icon-btn" onclick="go('invest')">📈<br>${t('invest')}</div>
-    <div class="icon-btn" onclick="go('bills')">🧾<br>${t('bills')}</div>
-    <div class="icon-btn" onclick="go('goals')">🎯<br>${t('goals')}</div>
-    <div class="icon-btn" onclick="go('orders')">🔁<br>${t('orders')}</div>
-    <div class="icon-btn" onclick="go('branches')">🏧<br>${t('branches')}</div>
-    <div class="icon-btn" onclick="go('security')">🔒<br>${t('security')}</div>
-    <div class="icon-btn" onclick="go('faq')">❓<br>${t('faq')}</div>
-    ${me.role === 'admin' ? `<div class="icon-btn" onclick="go('admin')">🛡️<br>${t('admin')}</div>` : ''}
+  <button type="button" class="mini-card" onclick="go('fx')"><span><span class="mini-label" style="display:block">${t('fxLabel')}</span><span class="mini-sub" style="direction:ltr;display:block;text-align:start">${me.fxAccount || ''}</span></span><span class="mini-amt">${moneyUsd(me.fxBalanceCents)}</span></button>
+  <button type="button" class="mini-card" onclick="go('cards')"><span><span class="mini-label" style="display:block">${t('cardsBalance')} (${nCards})</span><span class="mini-sub">${lang === 'en' ? 'USD only' : 'بالدولار فقط'}</span></span><span class="mini-amt">${moneyUsd(cardsTotal)}</span></button>
+  <div class="card"><div class="grid">
+    <button type="button" class="tile" onclick="go('transfer')"><span class="tile-ic">${IC.transfer}</span>${t('transfer')}</button>
+    <button type="button" class="tile" onclick="go('bills')"><span class="tile-ic">${IC.receipt}</span>${t('bills')}</button>
+    <button type="button" class="tile" onclick="go('qr')"><span class="tile-ic">${IC.qr}</span>${lang === 'en' ? 'QR' : 'رمز QR'}</button>
+    <button type="button" class="tile" onclick="go('cards')"><span class="tile-ic">${IC.card}</span>${t('cards')}</button>
+    <button type="button" class="tile" onclick="go('statement')"><span class="tile-ic">${IC.chart}</span>${t('statement')}</button>
+    <button type="button" class="tile" onclick="go('deposits')"><span class="tile-ic">${IC.bank}</span>${t('deposits')}</button>
+    <button type="button" class="tile" onclick="go('fx')"><span class="tile-ic">${IC.dollar}</span>${lang === 'en' ? 'Currencies' : 'عملات'}</button>
+    <button type="button" class="tile" onclick="go('services')"><span class="tile-ic">${IC.grid}</span>${lang === 'en' ? 'All services' : 'كل الخدمات'}</button>
   </div></div>
-  <div class="card"><h2>${t('history')}</h2>${rows}</div>
-  <button class="btn secondary" onclick="doLogout()">${t('logout')}</button>`;
+  <div class="card"><div class="ops-head"><h2>${t('latestOps')}</h2><button type="button" class="link-btn" onclick="go('statement')">${t('showAll')}</button></div>${rows}</div>`;
+}
+function servicesView(){
+  const L = (a, e) => lang === 'en' ? e : a;
+  const items = [
+    [IC.card, t('cards'), L('رصيد بالدولار فقط، عرض التفاصيل بأيقونة العين ونسخ الرقم، تجميد وحدود', 'USD balance only, eye-icon details and number copy, freeze and limits'), "go('cards')"],
+    [IC.card, t('topup'), L('من الحساب الأجنبي فقط، بالدولار — اشحن الأجنبي من الجنيه بسعر 10,000', 'From the FX account only, in USD — fund FX from SDG at 10,000'), "go('cardTopup')"],
+    [IC.transfer, t('cardTransfer'), L('تحويل بالدولار بين بطاقات وصل فقط', 'USD transfer between Wassil cards only'), "go('cardTransfer')"],
+    [IC.bank, t('deposits'), L('ودائع لأجل من 24 ساعة إلى سنة — 12% حتى 30% حسب المبلغ', 'Term deposits from 24h to a year — 12% to 30% by amount'), "go('deposits')"],
+    [IC.trend, t('invest'), L('عملات وذهب وأسهم تجريبية بأسعار وهمية معلنة', 'Demo currencies, gold and stocks at announced fake prices'), "go('invest')"],
+    [IC.calc, t('loanCalc'), L('حاسبة أقساط افتراضية 10% — تجريبي فقط', 'Demo instalment calculator at 10% — demo only'), "go('loan')"],
+    [IC.repeat, t('orders'), L('تحويلات متكررة محفوظة تنفذ تلقائياً', 'Saved recurring transfers that run automatically'), "go('orders')"],
+    [IC.target, t('goals'), L('ادخر لهدفك بمبلغ ومدة محددين', 'Save towards a goal with a set amount and term'), "go('goals')"],
+    [IC.chart, t('statement'), L('كل عملياتك مع المرجع والتاريخ', 'All your operations with reference and date'), "go('statement')"],
+    [IC.shield, t('security'), L('بصمة، كلمة مرور، وأجهزة موثوقة', 'Fingerprint, password and trusted devices'), "go('security')"],
+    [IC.pin, t('branches'), L('مواقع الفروع وأوقات العمل', 'Branch locations and opening hours'), "go('branches')"],
+    [IC.headset, t('faq'), L('أسئلة شائعة ودعم تجريبي', 'FAQ and demo support'), "go('faq')"],
+  ];
+  return `<div class="page-title">${t('bankServicesPage')}</div><p class="page-sub">${t('allServicesInOne')}</p>
+  <div class="svc-grid">${items.map(([ic, ti, de, act]) => `<button type="button" class="svc-card" onclick="${act}"><span class="svc-ic">${ic}</span><span class="svc-title" style="display:block">${ti}</span><span class="svc-desc" style="display:block">${de}</span></button>`).join('')}</div>`;
+}
+function accountView(){
+  if (!me) return loginView();
+  const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
+  const others = (dash?.directory || []).filter(u => u.id !== me.id);
+  const ben = others.map(u => `<button type="button" class="menu-row" onclick="go('transfer')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet' : 'لا يوجد مستفيدون بعد'}</p>`;
+  return `<div class="page-title">${t('myAccount')}</div><p class="page-sub">${lang === 'en' ? 'Your saved demo account data and settings.' : 'بيانات حسابك التجريبي المحفوظ وإعداداته.'}</p>
+  <div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc(letter)}</div><div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${t('demoClient')}</div></div></div>
+  <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(me.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(me.sdgBalance)}</span></div>
+  <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(me.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(me.fxBalanceCents)}</span></div>
+  <div class="acct-row"><span class="acct-ic">${IC.mail}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${t('email')}</span><span class="acct-row-sub" style="display:block">${esc(me.email)}</span></span><span class="pill-active">${me.status === 'active' ? t('active') : esc(me.status || '')}</span></div></div>
+  <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${t('beneficiaries')}</span></span></div>${ben}</div>
+  <div class="profile-card"><button type="button" class="menu-row" onclick="go('statement')"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('notifications')}</span><span class="menu-row-sub">${lang === 'en' ? 'Your operations and updates' : 'عملياتك وتحديثاتك'}</span></span><span>›</span></button>
+  <button type="button" class="menu-row" onclick="go('security')"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('security')}</span><span class="menu-row-sub">${lang === 'en' ? 'Fingerprint and password' : 'البصمة وكلمة المرور'}</span></span><span>›</span></button></div>
+  <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
+  <div class="demo-foot">${t('demoNote')}</div>`;
+}
+function statementView(){
+  const txs = dash?.transactions || [];
+  let inSdg = 0, outSdg = 0;
+  txs.forEach(tx => { const a = tx.amountSdg || 0; if (a > 0) inSdg += a; if (a < 0) outSdg += -a; });
+  const rows = txs.map(opRow).join('') || `<p class="muted">—</p>`;
+  return `${backLink(t('backHome'), 'home')}
+  <div class="page-title">${t('statement')}</div><p class="page-sub">${t('statementSub')}</p>
+  <div class="summary-row">
+    <div class="summary-card"><b class="pos">${moneySdg(inSdg)}</b><span>${t('totalIn')} (ج.س)</span></div>
+    <div class="summary-card"><b class="neg">${moneySdg(outSdg)}</b><span>${t('totalOut')} (ج.س)</span></div>
+    <div class="summary-card"><b>${txs.length}</b><span>${t('opsCount')}</span></div>
+  </div>
+  <button type="button" class="btn-outline" onclick="downloadStatementText()">${t('downloadText')}</button>
+  <div class="card">${rows}</div>`;
+}
+function downloadStatementText(){
+  const txs = dash?.transactions || [];
+  const lines = txs.map(tx => `${txTitle(tx)} | ${txAmount(tx)} | ${new Date(tx.createdAt).toLocaleString()} | ${tx.ref || ''}`);
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wassil-statement.txt'; a.click();
+  toast(lang === 'en' ? 'Statement downloaded' : 'تم تنزيل الكشف');
+}
+function qrView(){
+  if (!me) return loginView();
+  const cells = qrCells((me.sdgAccount || '') + nameOf(me));
+  return `<div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-grid">${cells}</div>
+  <div style="font-weight:900;font-size:17px">${esc(nameOf(me))}</div>
+  <div class="muted" style="direction:ltr">${esc(me.sdgAccount || '')}</div>
+  <p class="muted">${t('qrNote')}</p>
+  <button class="btn secondary" onclick="copyAccount()">${lang === 'en' ? 'Copy account number' : 'نسخ رقم الحساب'}</button>
+  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+}
+async function copyAccount(){
+  try { await navigator.clipboard.writeText(me.sdgAccount || ''); } catch { const ta = document.createElement('textarea'); ta.value = me.sdgAccount || ''; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast(lang === 'en' ? 'Account number copied' : 'تم نسخ رقم الحساب');
+}
+function loanView(){
+  return `<div class="page-title">${t('loanCalc')}</div><p class="page-sub">${lang === 'en' ? 'Demo instalment calculator at 10% per year — demo only, not real financing.' : 'حاسبة أقساط افتراضية بنسبة 10% سنوياً — تجريبي فقط، ليس تمويلاً حقيقياً.'}</p><div class="card">
+  <label>${t('amount')} (SDG)</label><input id="loan-amt" type="number" min="1">
+  <label>${lang === 'en' ? 'Months' : 'عدد الأشهر'}</label><input id="loan-months" type="number" min="1" value="12">
+  <button class="btn" onclick="calcLoan()">${t('confirm')}</button><div id="loan-out" class="ok"></div>
+  <button class="btn secondary" onclick="go('services')">${t('back')}</button></div>`;
+}
+function calcLoan(){
+  const p = parseFloat($('#loan-amt').value || 0); const m = parseFloat($('#loan-months').value || 0);
+  if (!p || !m) { $('#loan-out').textContent = lang === 'en' ? 'Enter amount and months' : 'أدخل المبلغ وعدد الأشهر'; return; }
+  const total = p * (1 + 0.10 * m / 12); const monthly = total / m;
+  $('#loan-out').textContent = (lang === 'en' ? 'Total: ' : 'الإجمالي: ') + moneySdg(Math.round(total)) + ' — ' + (lang === 'en' ? 'Monthly: ' : 'القسط الشهري: ') + moneySdg(Math.round(monthly));
 }
 function transferView(){
-  return `<div class="card"><h2>${t('transfer')}</h2>
+  const others = (dash?.directory || []).filter(u => u.id !== me?.id);
+  const opts = others.map(u => `<option value="${esc(u.sdgAccount || '')}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
+  const list = others.map(u => `<button type="button" class="menu-row" onclick="pickTransferUser('${esc(u.sdgAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No registered users yet' : 'لا يوجد مستخدمون مسجلون بعد'}</p>`;
+  return `<div class="page-title">${t('transferTitle')}</div><p class="page-sub">${t('transferIntro')}</p>
+  <div class="card">
+  <label>${t('beneficiary')}</label>
+  <select id="tr-user-select" onchange="onTransferUserChange(this.value)"><option value="">${t('chooseUser')}</option>${opts}<option value="__other__">${t('otherAccount')}</option></select>
   <label>${t('toAccount')}</label><input id="tr-to" placeholder="1001 0000 0002">
-  <label>${t('amount')} (SDG)</label><input id="tr-amt" type="number" min="1">
+  <label>${t('amountSdg')}</label><input id="tr-amt" type="number" min="1" value="0">
+  <label>${t('noteOptional')}</label><input id="tr-note" placeholder="${lang === 'en' ? 'Example: monthly expenses' : 'مثال: مصاريف الشهر'}">
   <div id="tr-name" class="muted"></div><button class="btn secondary" onclick="lookupAcc()">Check / تحقق</button>
-  <button class="btn" onclick="doTransfer()">${t('send')}</button><div id="tr-err" class="err"></div>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  <button class="btn" onclick="doTransfer()">${t('review')}</button><div id="tr-err" class="err"></div>
+  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>
+  <div class="tabs"><button type="button" class="tab-btn ${transferTab === 'users' ? 'active' : ''}" onclick="setTransferTab('users')">${t('registeredUsers')}</button><button type="button" class="tab-btn ${transferTab === 'saved' ? 'active' : ''}" onclick="setTransferTab('saved')">${t('savedBeneficiaries')}</button></div>
+  <div class="card">${list}</div>`;
 }
+function onTransferUserChange(v){
+  const inp = $('#tr-to'); if (!inp) return;
+  if (v === '__other__') { inp.value = ''; inp.focus(); return; }
+  inp.value = v; lookupAcc();
+}
+function pickTransferUser(acct){ const sel = $('#tr-user-select'); if (sel) sel.value = acct; onTransferUserChange(acct); }
+function setTransferTab(tab){ transferTab = tab; render(); }
 function fxView(){
-  return `<div class="card"><h2>${t('fx')}</h2><p>${me.fxAccount || ''} — ${moneyUsd(me.fxBalanceCents)}</p>
-  <p class="muted">1 USD = 10,000 SDG (demo rate)</p>
-  <h3>${t('fundFx')}</h3><label>${t('amount')} (SDG)</label><input id="fx-amt" type="number" min="1">
-  <button class="btn" onclick="doFxFund()">${t('fundFx')}</button>
-  <h3>${t('fxTransfer')}</h3><label>FX account / رقم الحساب الأجنبي</label><input id="fx-to" placeholder="2002 0000 0002">
-  <label>${t('amount')} (USD)</label><input id="fx-usd" type="number" step="0.01" min="0.01">
-  <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button><div id="fx-err" class="err"></div>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  if (!me) return loginView();
+  const others = (dash?.directory || []).filter(u => u.id !== me.id);
+  const users = others.map(u => `<button type="button" class="menu-row" onclick="pickFxUser('${esc(u.fxAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${lang === 'en' ? 'FX account: ' : 'رقم الحساب الأجنبي: '}${esc(u.fxAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">—</p>`;
+  const fxTxs = (dash?.transactions || []).filter(tx => (tx.type || '').startsWith('fx_'));
+  const fxRows = fxTxs.map(opRow).join('') || `<p class="muted">—</p>`;
+  const fundForm = fxAction === 'fund' ? `<div class="card"><h3>${t('fundFx')}</h3><label>${t('amountSdg')}</label><input id="fx-amt" type="number" min="1">
+  <button class="btn" onclick="doFxFund()">${t('fundFx')}</button></div>` : '';
+  const transferForm = fxAction === 'transfer' ? `<div class="card"><h3>${t('fxTransfer')}</h3><label>FX account / رقم الحساب الأجنبي</label><input id="fx-to" placeholder="2002 0000 0002">
+  <label>${t('amountUsd')}</label><input id="fx-usd" type="number" step="0.01" min="0.01">
+  <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button></div>` : '';
+  return `${backLink(t('backServices'), 'services')}
+  <div class="page-title">${t('fx')}</div><p class="page-sub">${t('fxIntro')}</p>
+  <div class="balance"><div class="balance-top"><span>${lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)'}</span></div>
+  <div class="big">${moneyUsd(me.fxBalanceCents)}</div>
+  <div class="acct-num">${me.fxAccount || ''}</div></div>
+  <div class="card">${detailRow(lang === 'en' ? 'FX account number' : 'رقم الحساب الأجنبي', esc(me.fxAccount || ''))}${detailRow(lang === 'en' ? 'SDG account (SDG)' : 'الحساب بالجنيه (SDG)', esc(me.sdgAccount || ''))}${detailRow(lang === 'en' ? 'Your SDG balance' : 'رصيد حسابك (ج.س)', moneySdg(me.sdgBalance))}</div>
+  <div class="action-row">
+    <button type="button" class="action-btn ${fxAction === 'fund' ? 'active' : ''}" onclick="setFxAction('fund')"><span class="action-ic">${IC.dollar}</span>${t('fundFxShort')}</button>
+    <button type="button" class="action-btn ${fxAction === 'transfer' ? 'active' : ''}" onclick="setFxAction('transfer')"><span class="action-ic">${IC.transfer}</span>${t('fxTransferShort')}</button>
+    <button type="button" class="action-btn" onclick="go('cardTopup')"><span class="action-ic">${IC.card}</span>${t('topupFromFx')}</button>
+  </div>
+  ${fundForm}${transferForm}<div id="fx-err" class="err"></div>
+  <div class="page-title" style="font-size:18px">${t('registeredUsers')}</div>
+  <div class="card">${users}</div>
+  <div class="page-title" style="font-size:18px">${t('fxHistory')}</div>
+  <div class="card">${fxRows}</div>`;
+}
+function setFxAction(a){ fxAction = a; render(); }
+function pickFxUser(acct){ fxAction = 'transfer'; render(); const inp = $('#fx-to'); if (inp) inp.value = acct; }
+function cardTopupView(){
+  if (!me) return loginView();
+  const cards = dash?.cards || [];
+  if (ctCardId == null && cards.length) ctCardId = cards[0].id;
+  const opts = cards.map(c => `<option value="${c.id}" ${c.id === ctCardId ? 'selected' : ''}>${esc(c.kind || 'Visa')} — ${esc(c.masked)} — ${moneyUsd(c.balanceCents)}</option>`).join('');
+  return `${backLink(t('backCards'), 'cards')}
+  <div class="page-title">${t('cardTopupTitle')}</div><p class="page-sub">${t('cardTopupIntro')}</p>
+  <div class="card">${detailRow(lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)', moneyUsd(me.fxBalanceCents))}${detailRow(lang === 'en' ? 'FX account number' : 'رقم الحساب الأجنبي', esc(me.fxAccount || ''))}</div>
+  <div class="card">
+  <label>${t('topupSource')}</label><select id="ct-source"><option>${lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)'} — ${moneyUsd(me.fxBalanceCents)}</option></select>
+  <label>${t('cardToTopup')}</label><select id="ct-card" onchange="ctCardId=Number(this.value)">${opts}</select>
+  <label>${t('topupAmount')}</label><input id="ct-amt" type="number" step="0.01" min="0.01" value="10.00">
+  <button class="btn" onclick="doCardTopup()">${t('reviewTopup')}</button><div id="ct-err" class="err"></div>
+  <button class="btn secondary" onclick="go('cards')">${t('back')}</button></div>`;
+}
+async function doCardTopup(){
+  const id = Number($('#ct-card') ? $('#ct-card').value : ctCardId);
+  const amt = $('#ct-amt') ? $('#ct-amt').value : '';
+  if (!id || !amt) { const el = $('#ct-err'); if (el) el.textContent = lang === 'en' ? 'Pick a card and amount' : 'اختر بطاقة ومبلغاً'; return; }
+  if (!confirm((lang === 'en' ? 'Review top-up\nAmount: ' : 'مراجعة الشحن\nالمبلغ: ') + amt + ' USD')) return;
+  try { await api('/api/cards/' + id + '/topup', { method:'POST', body: JSON.stringify({ amountUsd: amt }) }); toast('OK'); await loadDash(); openCard(id); }
+  catch(e){ const el = $('#ct-err'); if (el) el.textContent = e.message; }
+}
+function cardTransferView(){
+  if (!me) return loginView();
+  const cards = dash?.cards || [];
+  if (ccFromId == null && cards.length) ccFromId = cards[0].id;
+  const src = cards.find(c => c.id === ccFromId) || cards[0];
+  const opts = cards.map(c => `<option value="${c.id}" ${c.id === ccFromId ? 'selected' : ''}>${esc(c.kind || 'Visa')} — ${esc(c.masked)}</option>`).join('');
+  return `${backLink(t('backCards'), 'cards')}
+  <div class="page-title">${t('cardTransferTitle')}</div><p class="page-sub">${t('cardTransferIntro')}</p>
+  <div class="card">
+  <label>${t('sourceCard')}</label><select id="cc-from" onchange="ccFromId=Number(this.value);const n=document.getElementById('cc-bal');if(n)n.textContent='${lang === 'en' ? 'Source card balance: ' : 'رصيد بطاقة المصدر: '}' + (this.options[this.selectedIndex].dataset.bal || '');">${cards.map(c => `<option value="${c.id}" data-bal="${moneyUsd(c.balanceCents)}" ${c.id === ccFromId ? 'selected' : ''}>${esc(c.kind || 'Visa')} — ${esc(c.masked)}</option>`).join('')}</select>
+  <label>${t('recipientCard')}</label><input id="cc-to" placeholder="0000 0000 0000 0000">
+  <label>${t('amountUsd')}</label><input id="cc-amt" type="number" step="0.01" min="0.01" value="10.00">
+  <div id="cc-bal" class="muted">${lang === 'en' ? 'Source card balance: ' : 'رصيد بطاقة المصدر: '}${src ? moneyUsd(src.balanceCents) : ''}</div>
+  <label>${t('noteOptional')}</label><input id="cc-note">
+  <button class="btn" onclick="doCardTransfer()">${t('reviewTransfer')}</button><div id="cc-err" class="err"></div>
+  <button class="btn secondary" onclick="go('cards')">${t('back')}</button></div>`;
+}
+async function doCardTransfer(){
+  const from = Number($('#cc-from') ? $('#cc-from').value : ccFromId);
+  const to = $('#cc-to') ? $('#cc-to').value : ''; const amt = $('#cc-amt') ? $('#cc-amt').value : '';
+  if (!from || !to || !amt) { const el = $('#cc-err'); if (el) el.textContent = lang === 'en' ? 'Fill in card, recipient and amount' : 'أكمل البطاقة والمستلم والمبلغ'; return; }
+  // Review step; the optional note is shown on the form only — the card-transfer API takes no note field, so it is not sent or stored.
+  if (!confirm((lang === 'en' ? 'Review card transfer\nAmount: ' : 'مراجعة التحويل\nالمبلغ: ') + amt + ' USD')) return;
+  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt }) }); toast('OK — ' + j.ref); await loadDash(); openCard(from); }
+  catch(e){ const el = $('#cc-err'); if (el) el.textContent = e.message; }
 }
 function cardsView(){
-  const list = (dash?.cards || []).map(c =>
-    `<div class="visa" onclick="openCard(${c.id})"><div>${c.kind} — ${c.status}</div><div class="num">${esc(c.masked)}</div><div>${moneyUsd(c.balanceCents)} — ${esc(c.exp || '')}</div></div>`).join('') || `<p class="muted">—</p>`;
-  return `<div class="card"><h2>${t('cards')}</h2>${list}
-  <button class="btn" onclick="requestCard()">${t('newCard')} — 100,000 SDG</button><div id="cd-err" class="err"></div>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  const cards = dash?.cards || [];
+  const active = cards.filter(c => c.status === 'active' || c.status === 'frozen');
+  const fpNote = window.PublicKeyCredential
+    ? (lang === 'en' ? 'Fingerprint is available on this device — open a card page and use the eye icon to show its full details.' : 'البصمة متاحة على هذا الجهاز — افتح صفحة أي بطاقة واستخدم أيقونة العين لعرض تفاصيلها كاملة.')
+    : t('fpUnavailable');
+  const list = cards.map(c =>
+    `<div><div class="visa" onclick="openCard(${c.id})"><div style="display:flex;justify-content:space-between;gap:8px"><span>وصل</span><span>VISA ${esc(c.kind || '')}</span></div><div class="num">${esc(c.masked)}</div><div style="display:flex;justify-content:space-between;gap:8px"><span>${lang === 'en' ? 'Balance: ' : 'الرصيد: '}${moneyUsd(c.balanceCents)}</span><span>${lang === 'en' ? 'Daily limit: ' : 'الحد اليومي: '}${moneyUsd((c.dailyLimitUsd || 0) * 100)}</span></div><div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px"><span>${lang === 'en' ? 'Valid to: ' : 'صالحة حتى: '}${esc(c.exp || '')}</span><span>${lang === 'en' ? 'Tap to open card page' : 'اضغط لفتح صفحة البطاقة'} ›</span></div></div><div style="text-align:end;margin:-4px 0 14px"><span class="pill-active">${statusLabel(c.status)}</span></div></div>`).join('') || `<p class="muted">—</p>`;
+  return `${backLink(t('backServices'), 'services')}
+  <div class="page-title">${t('cards')}</div><p class="page-sub">${t('cardsIntro')}</p>
+  <div class="card"><div style="font-weight:900;margin-bottom:6px">${t('fpNoticeTitle')}</div><p class="muted" style="margin:0">${fpNote}</p></div>
+  ${list}
+  <div class="card"><div style="font-weight:900">${t('newCardTitle')}</div><p class="muted">${t('newCardDesc')}</p>
+  ${detailRow(t('issueFee'), moneySdg(100000))}${detailRow(t('validity'), lang === 'en' ? '5 years from issuance' : '5 سنوات من تاريخ الإصدار')}${detailRow(t('yourBalance'), moneySdg(me ? me.sdgBalance : 0))}${detailRow(t('activeCards'), lang === 'en' ? `${active.length} of 5 max` : `${active.length} من 5 كحد أقصى`)}
+  <button class="btn" onclick="requestCard()">${t('newCard')} — 100,000 SDG</button><div id="cd-err" class="err"></div></div>
+  <p class="muted">${lang === 'en' ? 'Card balances are USD only. Cards are topped up from the FX account only — fund your FX account from your SDG account first, then top up a card, and card-to-card transfers are card-to-card only in USD.' : 'أرصدة البطاقات بالدولار فقط. البطاقة تُشحن من الحساب الأجنبي فقط — اشحن حسابك الأجنبي من حساب الجنيه أولاً ثم اشحن البطاقة، وتحويلات البطاقات تتم من بطاقة إلى بطاقة فقط بالدولار.'}</p>`;
 }
 function cardPageView(){
   const c = selCard; if (!c) return cardsView();
-  const hist = (c.history || []).map(tx => `<div class="row" onclick="openTx(${tx.id})"><span>${esc(txTitle(tx))}</span><b>${esc(txAmount(tx))}</b></div>`).join('') || `<p class="muted">—</p>`;
-  return `<div class="visa"><div>${c.kind} — ${c.status}</div><div class="num" id="cardNum">${esc(c.masked)}</div>
-  <div>${moneyUsd(c.balanceCents)} — ${esc(c.exp || '')}</div>
-  <button class="btn small" onclick="toggleEye()">👁 ${t('viewDetails')}</button></div>
+  const hist = (c.history || []).map(opRow).join('') || `<p class="muted">—</p>`;
+  const freezeTile = c.status === 'frozen'
+    ? `<button type="button" class="svc-card" onclick="unfreezeCard()"><span class="svc-ic">${IC.shield}</span><span class="svc-title" style="display:block">${t('unfreeze')}</span></button>`
+    : `<button type="button" class="svc-card" onclick="freezeCard()"><span class="svc-ic">${IC.shield}</span><span class="svc-title" style="display:block">${t('freeze')}</span></button>`;
+  return `${backLink(t('backCards'), 'cards')}
+  <div class="page-title">${t('cardPageTitle')}</div><p class="page-sub">${esc(c.kind || '')} · ${esc(c.masked)}</p>
+  <div class="visa"><div style="display:flex;justify-content:space-between;gap:8px"><span>وصل</span><span>VISA ${esc(c.kind || '')}</span></div>
+  <div class="num" id="cardNum" style="display:flex;align-items:center;gap:10px;justify-content:space-between"><span>${esc(c.masked)}</span><button type="button" class="eye-btn" style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer" onclick="toggleEye()">${IC.eye}</button></div>
+  <div style="display:flex;justify-content:space-between;gap:8px"><span>${lang === 'en' ? 'Balance: ' : 'الرصيد: '}${moneyUsd(c.balanceCents)}</span><span>${lang === 'en' ? 'Daily limit: ' : 'الحد اليومي: '}${moneyUsd((c.dailyLimitUsd || 0) * 100)}</span></div>
+  <div style="margin-top:6px">${lang === 'en' ? 'Valid to: ' : 'صالحة حتى: '}${esc(c.exp || '')}</div></div>
+  <div style="text-align:end;margin:-4px 0 14px"><span class="pill-active">${statusLabel(c.status)}</span></div>
   <div id="cardDetails" class="card hidden"></div>
-  <div class="card"><div class="grid">
-    <div class="icon-btn" onclick="freezeCard()">${t('freeze')}</div>
-    <div class="icon-btn" onclick="unfreezeCard()">${t('unfreeze')}</div>
-    <div class="icon-btn" onclick="cancelCard()">${t('cancelCard')}</div>
-    <div class="icon-btn" onclick="changeCvv()">${t('changeCvv')}</div>
-    <div class="icon-btn" onclick="topupCard()">${t('topup')}</div>
-    <div class="icon-btn" onclick="cardTransfer()">${t('cardTransfer')}</div>
-    <div class="icon-btn" onclick="changeLimit()">${t('dailyLimit')}</div>
-  </div></div>
-  <div class="card"><h2>${t('cardHistory')}</h2>${hist}</div>
-  <button class="btn secondary" onclick="go('cards')">${t('back')}</button>`;
+  <div class="page-title" style="font-size:18px">${t('cardOptions')}</div>
+  <div class="svc-grid" style="margin-bottom:14px">
+    <button type="button" class="svc-card" onclick="toggleEye()"><span class="svc-ic">${IC.eye}</span><span class="svc-title" style="display:block">${t('viewDetails')}</span></button>
+    <button type="button" class="svc-card" onclick="ctCardId=${c.id};go('cardTopup')"><span class="svc-ic">${IC.dollar}</span><span class="svc-title" style="display:block">${t('topup')}</span></button>
+    <button type="button" class="svc-card" onclick="ccFromId=${c.id};go('cardTransfer')"><span class="svc-ic">${IC.transfer}</span><span class="svc-title" style="display:block">${t('cardTransfer')}</span></button>
+    ${freezeTile}
+    <button type="button" class="svc-card" onclick="changeLimit()"><span class="svc-ic">${IC.calc}</span><span class="svc-title" style="display:block">${t('dailyLimit')}</span></button>
+    <button type="button" class="svc-card" onclick="changeCvv()"><span class="svc-ic">${IC.lock}</span><span class="svc-title" style="display:block">${t('changeCvv')}</span></button>
+  </div>
+  <button type="button" class="btn-outline-danger" onclick="cancelCard()">${t('cancelCardBtn')}</button>
+  <div class="page-title" style="font-size:18px;margin-top:18px">${t('cardHistoryTitle')}</div>
+  <div class="card">${hist}</div>`;
 }
 function depositsView(){
-  return `<div class="card"><h2>${t('deposits')}</h2>
-  <label>${t('amount')} (SDG)</label><input id="dp-amt" type="number" min="1">
-  <label>Duration / المدة</label><select id="dp-days">
-    <option value="1">24h — 24 ساعة</option><option value="7">Week — أسبوع</option>
-    <option value="30">Month — شهر</option><option value="90">3 months — 3 أشهر</option>
-    <option value="180">6 months — 6 أشهر</option><option value="365">Year — سنة</option></select>
-  <p class="muted">Rates (annual, demo): &lt;1,000,000 = 12% · 1,000,000+ = 15% · 10,000,000+ = 20% · 1,000,000,000+ = 30%. Profit = principal × rate × days ÷ 365.</p>
-  <button class="btn" onclick="doDeposit()">${t('confirm')}</button><div id="dp-err" class="err"></div><div id="dp-ok" class="ok"></div>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  return `${backLink(t('backServices'), 'services')}
+  <div class="page-title">${t('depositsTitle')}</div><p class="page-sub">${t('depositsIntro')}</p>
+  <div class="card"><div style="font-weight:900;margin-bottom:8px">${lang === 'en' ? 'Annual profit rate tiers by deposit amount' : 'شرائح نسبة الأرباح السنوية حسب مبلغ الوديعة'}</div>
+  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'Under 1,000,000 SDG — 12% per year' : 'أقل من 1,000,000 ج.س — 12% سنوياً'}</p>
+  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'From 1,000,000 to under 10,000,000 SDG — 15% per year' : 'من 1,000,000 إلى أقل من 10,000,000 ج.س — 15% سنوياً'}</p>
+  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'From 10,000,000 to under 1,000,000,000 SDG — 20% per year' : 'من 10,000,000 إلى أقل من 1,000,000,000 ج.س — 20% سنوياً'}</p>
+  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'From 1,000,000,000 SDG and above — 30% per year' : 'من 1,000,000,000 ج.س فأكثر — 30% سنوياً'}</p>
+  <p class="muted" style="margin:10px 0 0">${lang === 'en' ? 'Profit = deposit amount × annual rate × (days ÷ 365) — maturity date = deposit date + days.' : 'الربح = مبلغ الوديعة × النسبة السنوية × (عدد أيام المدة ÷ 365) — وتاريخ الاستحقاق = تاريخ الإيداع + أيام المدة.'}</p></div>
+  <div class="card">
+  <label>${lang === 'en' ? 'Deposit amount (SDG)' : 'مبلغ الوديعة (ج.س)'}</label><input id="dp-amt" type="number" min="1" value="10000">
+  <label>${lang === 'en' ? 'Duration' : 'المدة'}</label><select id="dp-days">
+    <option value="1">${durationLabel(1)}</option><option value="7">${durationLabel(7)}</option>
+    <option value="30" selected>${durationLabel(30)}</option><option value="90">${durationLabel(90)}</option>
+    <option value="180">${durationLabel(180)}</option><option value="365">${durationLabel(365)}</option></select>
+  <button class="btn" onclick="doDeposit()">${t('openDeposit')}</button><div id="dp-err" class="err"></div><div id="dp-ok" class="ok"></div></div>
+  <div class="page-title" style="font-size:18px">${t('myDeposits')}</div>
+  <div id="deposits-list" class="card"><p class="muted">…</p></div>`;
+}
+async function loadDeposits(){
+  const el = $('#deposits-list'); if (!el) return;
+  try {
+    const j = await api('/api/deposits');
+    el.innerHTML = (j.deposits || []).map(d => `<div class="dep-row"><div style="font-weight:800">${lang === 'en' ? 'Deposit' : 'وديعة'} ${moneySdg(d.principal)} — ${durationLabel(d.days)}</div>
+    <div class="muted">${lang === 'en' ? 'Expected profit' : 'الربح الافتراضي'} (${Math.round(d.rate * 100)}% ${lang === 'en' ? 'per year' : 'سنوياً'}): ${moneySdg(d.profit)} · ${lang === 'en' ? 'Total at maturity' : 'الإجمالي عند الاستحقاق'}: ${moneySdg(d.total)} · ${lang === 'en' ? 'Maturity' : 'الاستحقاق'}: ${fmtDate(d.maturityDate)} · ${lang === 'en' ? 'Deposit' : 'المرجع'} #${d.id}</div></div>`).join('') || `<p class="muted">—</p>`;
+  } catch(e){ el.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
 }
 function investView(){
   return `<div class="card"><h2>${t('invest')} — <span class="badge">تجريبي</span></h2><p class="muted">Demo only — fake announced prices, no real trading or real money.</p>
@@ -170,18 +526,34 @@ function investView(){
 }
 function receiptView(){
   const tx = selTx; if (!tx) return homeView();
-  return `<div class="receipt" id="receiptCard"><div class="head">وصل Wassil <span class="badge">تجريبي</span></div>
-  <p><b>${esc(txTitle(tx))}</b></p>
-  <p>${t('amount')}: ${esc(txAmount(tx))}</p>
-  <p>From / من: ${esc(tx.fromName || '')} — ${esc(tx.fromAccount || '')}</p>
-  <p>To / إلى: ${esc(tx.toName || '')} — ${esc(tx.toAccount || '')}</p>
-  ${tx.conversion ? `<p>${esc(tx.conversion)}</p>` : ''}
-  <p>Date / التاريخ: ${esc(new Date(tx.createdAt).toLocaleString())}</p>
-  <p>Reference / المرجع: ${esc(tx.ref || '')}</p>
-  <p>Status / الحالة: completed / مكتملة</p>
-  <p class="muted">Demo receipt — تجريبي فقط، ليس تحويلاً حقيقياً.</p></div>
-  <button class="btn" onclick="downloadReceipt()">⬇ ${t('downloadReceipt')}</button>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button>`;
+  const neg = (tx.currency === 'USD' ? (tx.amountUsdCents || 0) : (tx.amountSdg || 0)) < 0;
+  const conv = tx.conversion || ((tx.currency === 'USD' && tx.amountUsdCents != null && tx.amountSdg)
+    ? `${moneySdg(Math.abs(tx.amountSdg))} ← ${moneyUsd(Math.abs(tx.amountUsdCents))}` : '');
+  const d = new Date(tx.createdAt);
+  const dt = isNaN(d) ? '' : d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return `${backLink(t('backStatement'), 'statement')}
+  <div class="page-title">${t('receiptTitle')}</div><p class="page-sub">${t('receiptSub')}</p>
+  <div class="receipt" id="receiptCard">
+    <div class="receipt-head"><div class="receipt-logo">${WAVE}</div><div><div class="receipt-name">وصّل</div><div class="receipt-sub">${t('receiptTitle')}</div></div><span class="badge">تجريبي</span></div>
+    <div class="receipt-check"><span class="check-circle">✓</span><span class="pill-active">${lang === 'en' ? 'Completed' : 'مكتملة'}</span></div>
+    <div class="receipt-amount ${neg ? 'neg' : 'pos'}">${esc(txAmount(tx))}</div>
+    <div class="receipt-op">${t('operationOnAccount')}</div>
+    ${detailRow(lang === 'en' ? 'Operation type' : 'نوع العملية', esc(txTitle(tx)))}
+    ${detailRow(t('amount'), esc(txAmount(tx)))}
+    ${detailRow(lang === 'en' ? 'Currency' : 'العملة', esc(tx.currency || ''))}
+    ${detailRow(lang === 'en' ? 'Sender' : 'المرسل', esc(tx.fromName || ''))}
+    ${detailRow(lang === 'en' ? 'Sender account' : 'حساب المرسل', esc(tx.fromAccount || ''))}
+    ${detailRow(lang === 'en' ? 'Recipient' : 'المستلم', esc(tx.toName || ''))}
+    ${detailRow(lang === 'en' ? 'Recipient account' : 'حساب المستلم', esc(tx.toAccount || ''))}
+    ${conv ? detailRow(lang === 'en' ? 'Conversion details' : 'تفاصيل التحويل بين العملات', esc(conv)) : ''}
+    ${detailRow(lang === 'en' ? 'Date and time' : 'التاريخ والوقت', esc(dt))}
+    ${detailRow(lang === 'en' ? 'Reference number' : 'الرقم المرجعي', esc(tx.ref || ''))}
+    ${detailRow(lang === 'en' ? 'Operation status' : 'حالة العملية', lang === 'en' ? 'Completed' : 'مكتملة')}
+    <div class="qr-block"><div class="qr-grid qr-small">${qrCells(tx.ref || String(tx.id))}</div>
+    <p class="muted" style="text-align:center;margin:8px 0 0">${t('demoReceiptNote')}</p></div>
+  </div>
+  <button class="btn" onclick="downloadReceipt()">↓ ${t('downloadReceipt')}</button>
+  <button class="btn-outline" onclick="go('statement')">${t('backStatement')}</button>`;
 }
 function adminView(){
   const users = (dash?.allUsers || []).map(u =>
@@ -204,7 +576,6 @@ function simpleView(title, body){
 }
 function render(){
   document.documentElement.lang = lang; document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
-  $('#langBtn').textContent = lang === 'en' ? 'عربي' : 'EN';
   let html = '';
   if (view === 'login') html = loginView();
   else if (view === 'signup') html = signupView();
@@ -217,14 +588,31 @@ function render(){
   else if (view === 'receipt') html = receiptView();
   else if (view === 'admin') html = adminView();
   else if (view === 'security') html = securityView();
+  else if (view === 'services') html = servicesView();
+  else if (view === 'account') html = accountView();
+  else if (view === 'statement') html = statementView();
+  else if (view === 'qr') html = qrView();
+  else if (view === 'loan') html = loanView();
+  else if (view === 'cardTopup') html = cardTopupView();
+  else if (view === 'cardTransfer') html = cardTransferView();
   else if (view === 'bills') html = simpleView(t('bills'), `<div id="bills-list"></div>`);
   else if (view === 'goals') html = simpleView(t('goals'), `<label>Name / الاسم</label><input id="goal-name"><label>Target (SDG)</label><input id="goal-tgt" type="number"><button class="btn" onclick="addGoal()">${t('send')}</button><div id="goals-list"></div>`);
   else if (view === 'orders') html = simpleView(t('orders'), `<label>${t('toAccount')}</label><input id="ord-to"><label>${t('amount')} (SDG)</label><input id="ord-amt" type="number"><button class="btn" onclick="addOrder()">${t('send')}</button><div id="orders-list"></div>`);
   else if (view === 'branches') html = simpleView(t('branches'), `<div id="branches-list"></div>`);
   else if (view === 'faq') html = simpleView(t('faq'), `<p>Demo only — this is not real bank support. / تجريبي فقط — ليس دعماً بنكياً حقيقياً.</p><p>Q: Is this real money? / هل هذه أموال حقيقية؟<br>A: No — all balances and prices are fake demo data. / لا — كل الأرصدة والأسعار بيانات تجريبية وهمية.</p>`);
   else html = homeView();
+  const logged = !!me && view !== 'login' && view !== 'signup';
+  if (logged) html = userbar() + html;
   app().innerHTML = html;
+  const nav = document.getElementById('bottomNav');
+  if (nav) {
+    nav.classList.toggle('hidden', !logged);
+    document.body.classList.toggle('nav-on', logged);
+    const activeFor = { home: 'home', transfer: 'transfer', bills: 'bills', services: 'services', account: 'account' }[view];
+    document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === activeFor));
+  }
   if (view === 'invest') loadInvest();
+  if (view === 'deposits') loadDeposits();
   if (view === 'bills') loadBills();
   if (view === 'goals') loadGoals();
   if (view === 'orders') loadOrders();
@@ -254,7 +642,12 @@ async function lookupAcc(){
     $('#tr-name').textContent = (lang==='en' ? j.nameEn : j.nameAr) + ' — ' + j.sdgAccount; } catch { $('#tr-name').textContent = 'Not found / غير موجود'; }
 }
 async function doTransfer(){
-  try { await loadDash(); const j = await api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: $('#tr-to').value, amount: $('#tr-amt').value }) });
+  // Review step matching the screenshot's review button: confirm the summary first.
+  // The optional note is shown on the form only; the transfer API takes no note field, so it is not sent or stored.
+  const to = $('#tr-to') ? $('#tr-to').value : ''; const amt = $('#tr-amt') ? $('#tr-amt').value : '';
+  const name = $('#tr-name') ? $('#tr-name').textContent : '';
+  if (!confirm((lang === 'en' ? 'Review transfer\nTo: ' : 'مراجعة التحويل\nإلى: ') + (name || to) + '\n' + (lang === 'en' ? 'Amount: ' : 'المبلغ: ') + amt + ' SDG')) return;
+  try { await loadDash(); const j = await api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt }) });
     toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#tr-err').textContent = e.message; }
 }
 async function doFxFund(){
@@ -397,5 +790,7 @@ function downloadReceipt(){
     toast(t('downloaded'));
   }, 'image/png');
 }
-document.getElementById('langBtn').addEventListener('click', () => setLang(lang === 'en' ? 'ar' : 'en'));
-(async () => { if (token) { await loadDash(); if (me) view = 'home'; } render(); })();
+(async () => {
+  const splash = document.getElementById('splash');
+  setTimeout(async () => { if (splash) splash.classList.add('hidden'); if (token) { await loadDash(); if (me) view = 'home'; } render(); }, 1200);
+})();
