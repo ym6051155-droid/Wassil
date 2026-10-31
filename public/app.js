@@ -338,7 +338,7 @@ function loginView(){
   ${fp}
   <div id="li-err" class="err"></div>
   <button type="button" class="qr-btn" onclick="go('qr')">${IC.qr} ${t('qrShare')}</button>
-  <div class="link-row"><button type="button" onclick="go('signup')">${t('newSignup')}</button><button type="button" onclick="go('forgot')">${lang === 'en' ? 'Forgot password?' : 'نسيت كلمة المرور؟'}</button><button type="button" onclick="go('faq')">${t('cannotLogin')}</button></div></div>
+  <div class="link-row"><button type="button" onclick="go('signup')">${t('newSignup')}</button><button type="button" onclick="go('forgot')">${lang === 'en' ? 'Forgot password?' : 'نسيت كلمة المرور؟'}</button></div></div>
   <div class="auth-footer"><div class="auth-links"><button type="button" class="auth-link" onclick="window._policyReturn='login';go('policies')"><span class="auth-link-ic">${IC.policy}</span>${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</button>
   <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.info}</span>${t('about')}</button>
   <button type="button" class="auth-link" onclick="go('branches')"><span class="auth-link-ic">${IC.pin}</span>${t('locations')}</button>
@@ -927,7 +927,7 @@ function forgotView(){
   <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
   <div class="auth-card">${backLink(t('login'), 'login')}<h2>${lang === 'en' ? 'Forgot password / PIN' : 'نسيت كلمة المرور / رمز PIN'}</h2>
   <p class="muted">${lang === 'en' ? 'Answer your security questions to reset your password, your PIN, or both. If you never set security questions, this reset cannot work — contact the admin.' : 'أجب على أسئلة الأمان لإعادة تعيين كلمة المرور أو رمز PIN أو كليهما. إذا لم تضبط أسئلة أمان من قبل، لا تعمل هذه الطريقة — راجع الأدمن.'}</p>
-  <label>${t('email')}</label><input id="fg-email" type="email" value="${esc(em)}">
+  <label>${lang === 'en' ? 'Email or account number' : 'البريد الإلكتروني أو رقم الحساب'}</label><input id="fg-email" type="text" placeholder="${lang === 'en' ? 'name@example.com or 1002' : 'name@example.com أو 1002'}" value="${esc(em)}">
   ${qs ? '' : `<button class="btn" onclick="doForgotLoad()">${lang === 'en' ? 'Show my questions' : 'عرض أسئلتي'}</button>`}
   ${qs ? `<div>${qHtml}</div><label>${lang === 'en' ? 'New password (optional)' : 'كلمة المرور الجديدة (اختياري)'}</label><input id="fg-pass" type="password"><label>${lang === 'en' ? 'New 4-digit PIN (optional)' : 'رمز PIN الجديد (4 أرقام، اختياري)'}</label><input id="fg-pin" type="password" inputmode="numeric" maxlength="4"><button class="btn" onclick="doForgotReset()">${lang === 'en' ? 'Reset' : 'إعادة التعيين'}</button>` : ''}
   <div id="fg-err" class="err"></div><div id="fg-ok" class="ok"></div></div></div>`;
@@ -935,7 +935,7 @@ function forgotView(){
 async function doForgotLoad(){
   const email = $('#fg-email').value.trim();
   try { const j = await api('/api/security/questions?email=' + encodeURIComponent(email)); window._forgotEmail = email; window._forgotQs = j.questions; render(); }
-  catch(e){ $('#fg-err').textContent = lang === 'en' ? 'No security questions found for this email' : 'لا توجد أسئلة أمان لهذا البريد'; }
+  catch(e){ $('#fg-err').textContent = lang === 'en' ? 'No security questions found for this email or account number' : 'لا توجد أسئلة أمان لهذا البريد أو رقم الحساب'; }
 }
 async function doForgotReset(){
   const answers = (window._forgotQs || []).map(q => ({ id: q.id, answer: document.getElementById('fq-' + q.id).value }));

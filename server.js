@@ -418,8 +418,8 @@ async function handle(req, res) {
       return true;
     }
     if (p === '/api/security/questions' && method === 'GET') {
-      const email = String(url.searchParams.get('email') || '').toLowerCase();
-      const u = db().users.find((x) => x.email.toLowerCase() === email && x.status === 'active');
+      const ident = String(url.searchParams.get('email') || '').trim();
+      const u = db().users.find((x) => x.status === 'active' && (x.email.toLowerCase() === ident.toLowerCase() || normAcct(x.sdgAccount) === normAcct(ident) || normAcct(x.fxAccount) === normAcct(ident)));
       if (!u || !(u.securityQuestions || []).length) return sendJson(res, 404, { ok: false, error: 'not_found' });
       const qs = (u.securityQuestions || []).map((sq) => SECURITY_QUESTIONS.find((q) => q.id === sq.id)).filter(Boolean);
       return sendJson(res, 200, { ok: true, questions: qs });
@@ -435,8 +435,8 @@ async function handle(req, res) {
       return sendJson(res, 200, { ok: true, count: 2, user: publicUser(me) });
     }
     if (p === '/api/security/reset' && method === 'POST') {
-      const email = String(body.email || '').toLowerCase();
-      const u = db().users.find((x) => x.email.toLowerCase() === email);
+      const ident = String(body.email || '').trim();
+      const u = db().users.find((x) => x.email.toLowerCase() === ident.toLowerCase() || normAcct(x.sdgAccount) === normAcct(ident) || normAcct(x.fxAccount) === normAcct(ident));
       if (!u || u.status === 'banned' || !(u.securityQuestions || []).length) return sendJson(res, 400, { ok: false, error: 'reset_failed' });
       if (!verifySecurityAnswers(u, body.answers)) return sendJson(res, 400, { ok: false, error: 'reset_failed' });
       const newPassword = String(body.newPassword || '');
