@@ -64,7 +64,7 @@ async function loadDash(){ try { dash = await api('/api/dashboard'); me = dash.u
 
 // ---------- views ----------
 function loginView(){
-  return `<div class="card"><h2>${t('login')}</h2>
+  return `<div class="auth-hero"><div class="auth-logo">و</div><div class="auth-name">وصل <span style="font-size:15px;opacity:.75">Wassil</span></div><div class="auth-tag">تجريبي — Demo only</div></div><div class="card"><h2>${t('login')}</h2>
   <p class="muted">تجريبي — Demo only. No real email is sent and no real money moves.</p>
   <label>${t('email')}</label><input id="li-email" type="email">
   <label>${t('password')}</label><input id="li-pass" type="password">
@@ -74,7 +74,7 @@ function loginView(){
   <button class="btn secondary" onclick="go('signup')">${t('signup')}</button></div>`;
 }
 function signupView(){
-  return `<div class="card"><h2>${t('signup')}</h2>
+  return `<div class="auth-hero"><div class="auth-logo">و</div><div class="auth-name">وصل <span style="font-size:15px;opacity:.75">Wassil</span></div><div class="auth-tag">تجريبي — Demo only</div></div><div class="card"><h2>${t('signup')}</h2>
   <p class="muted">كود التفعيل تجريبي يظهر داخل التطبيق — لم يُرسل أي بريد حقيقي. / Demo activation code is shown in-app — no real email is sent.</p>
   <label>${t('email')}</label><input id="su-email" type="email">
   <label>${t('nameAr')}</label><input id="su-ar">
@@ -89,8 +89,9 @@ function homeView(){
   if (!me) return loginView();
   const rows = (dash?.transactions || []).slice(0, 10).map(tx =>
     `<div class="row" onclick="openTx(${tx.id})"><span>${esc(txTitle(tx))}</span><b>${esc(txAmount(tx))}</b></div>`).join('') || `<p class="muted">—</p>`;
-  return `<div class="balance"><div>${nameOf(me)}</div><div class="big">${moneySdg(me.sdgBalance)}</div>
-  <div>${me.sdgAccount || ''}</div><div style="margin-top:10px;cursor:pointer" onclick="go('fx')">FX: ${moneyUsd(me.fxBalanceCents)} — ${me.fxAccount || ''} ›</div></div>
+  return `<div class="balance"><div class="acct-label">${nameOf(me)} — ${t('home')}</div><div class="big">${moneySdg(me.sdgBalance)}</div>
+  <div class="acct-num">${me.sdgAccount || ''}</div></div>
+  <div class="fx-card" onclick="go('fx')"><div><div class="fx-label">${t('fx')}</div><div class="fx-num">${me.fxAccount || ''}</div></div><div style="text-align:end"><div class="fx-amount">${moneyUsd(me.fxBalanceCents)}</div><div class="fx-label">›</div></div></div>
   <div class="card"><h2>${t('services')}</h2><div class="grid">
     <div class="icon-btn" onclick="go('transfer')">💸<br>${t('transfer')}</div>
     <div class="icon-btn" onclick="go('cards')">💳<br>${t('cards')}</div>
