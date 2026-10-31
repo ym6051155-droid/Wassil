@@ -837,7 +837,7 @@ async function loadDeposits(){
 function investView(){
   return `${backLink(t('backServices'), 'services')}
   <div class="page-title">${t('invest')}</div>
-  <div class="card"><h2>${t('invest')}</h2><p class="muted">${lang === 'en' ? 'Prices move automatically every 5 minutes (max ±2% per move, within 50%–200% of the starting price) — your portfolio gains or loses with the price, and selling cashes it in.' : 'الأسعار بتتحرك تلقائياً كل 5 دقائق (بحد أقصى ±2% في الحركة، وبين 50% و200% من السعر الأصلي) — محفظتك بتربح أو بتخسر مع السعر، والبيع بيحوّل الربح أو الخسارة لكاش.'}</p><div id="inv-assets"></div><div id="inv-port"></div><div id="inv-err" class="err"></div>
+  <div class="card"><h2>${t('invest')}</h2><p class="muted">${lang === 'en' ? 'Prices move automatically every 5 minutes (max ±2% per move, within 50%–200% of the starting price) — your portfolio gains or loses with the price, and selling cashes it in.' : 'الأسعار بتتحرك تلقائياً كل 5 دقائق (بحد أقصى ±2% في الحركة، وبين 50% و200% من السعر الأصلي) — محفظتك بتربح أو بتخسر مع السعر، والبيع بيحوّل الربح أو الخسارة لكاش.'}</p><div id="inv-live"></div><div id="inv-assets"></div><div id="inv-port"></div><div id="inv-err" class="err"></div>
   <button class="btn secondary" onclick="go('services')">${t('backServices')}</button></div>`;
 }
 function receiptView(){
@@ -1200,8 +1200,11 @@ async function doDeposit(){
 }
 async function loadInvest(){
   try { const a = await api('/api/investments/assets'); const p = await api('/api/investments/portfolio');
-    $('#inv-assets').innerHTML = a.assets.map(x => { const base = x.basePriceSdg || x.priceSdg; const pct = base ? ((x.priceSdg - base) / base * 100) : 0; const col = pct >= 0 ? '#047857' : '#dc2626'; return `<div class="row"><span>${lang==='en'?x.nameEn:x.nameAr} — ${x.priceSdg} SDG / ${x.unitEn} <span style="color:${col};font-weight:800">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</span></span><button class="btn small" onclick="buyAsset('${x.id}')">Buy / شراء</button></div>`; }).join('');
-    $('#inv-port').innerHTML = '<h3>Portfolio / المحفظة</h3>' + (p.holdings.map(h => `<div class="row"><span>${h.assetId} × ${h.quantity} — value ${h.valueSdg} — P/L <span style="color:${h.profitSdg >= 0 ? '#047857' : '#dc2626'};font-weight:800">${h.profitSdg}</span></span><button class="btn small" onclick="sellAsset('${h.assetId}')">Sell / بيع</button></div>`).join('') || '<p class="muted">—</p>');
+    const lt = a.lastTick ? new Date(a.lastTick) : null;
+    const liveEl = $('#inv-live');
+    if (liveEl) liveEl.innerHTML = lt ? `<p class="muted"><span style="color:#047857;font-weight:800">●</span> ${lang==='en' ? 'Live — prices move every 5 minutes. Last move: ' : 'مباشر — الأسعار تتحرك كل 5 دقائق. آخر حركة: '}${lt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>` : '';
+    $('#inv-assets').innerHTML = a.assets.map(x => { const base = x.basePriceSdg || x.priceSdg; const diff = x.priceSdg - base; const pct = base ? (diff / base * 100) : 0; const col = diff > 0 ? '#047857' : diff < 0 ? '#dc2626' : '#64748b'; const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—'; const word = diff > 0 ? (lang==='en' ? 'Up' : 'ارتفع') : diff < 0 ? (lang==='en' ? 'Down' : 'انخفض') : (lang==='en' ? 'Steady' : 'ثابت'); const badge = `${arrow} ${word} ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`; const wait = diff === 0 ? ` <span class="muted">${lang==='en' ? '— first move within 5 minutes' : '— أول حركة خلال 5 دقائق'}</span>` : ''; return `<div class="row"><span><b>${lang==='en'?x.nameEn:x.nameAr}</b> — ${x.priceSdg} SDG / ${lang==='en'?x.unitEn:x.unitAr}<br><span class="muted">${lang==='en' ? 'Starting price' : 'السعر الأصلي'}: ${base} SDG</span> <span style="color:${col};font-weight:800">${badge}</span>${wait}</span><button class="btn small" onclick="buyAsset('${x.id}')">Buy / شراء</button></div>`; }).join('');
+    $('#inv-port').innerHTML = '<h3>Portfolio / المحفظة</h3>' + (p.holdings.map(h => { const nm = h.asset ? (lang==='en' ? h.asset.nameEn : h.asset.nameAr) : h.assetId; const arr = h.profitSdg > 0 ? '▲ ' : h.profitSdg < 0 ? '▼ ' : ''; return `<div class="row"><span>${nm} × ${h.quantity} — value ${h.valueSdg} — P/L <span style="color:${h.profitSdg >= 0 ? '#047857' : '#dc2626'};font-weight:800">${arr}${h.profitSdg}</span></span><button class="btn small" onclick="sellAsset('${h.assetId}')">Sell / بيع</button></div>`; }).join('') || '<p class="muted">—</p>');
   } catch(e){ const el = $('#inv-err'); if (el) el.textContent = e.message; }
 }
 async function buyAsset(id){

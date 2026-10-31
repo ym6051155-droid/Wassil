@@ -729,7 +729,7 @@ async function handle(req, res) {
       save();
     }
     // ---- investments ----
-    if (p === '/api/investments/assets' && method === 'GET') { tickPrices(); return sendJson(res, 200, { ok: true, assets: liveAssets() }); }
+    if (p === '/api/investments/assets' && method === 'GET') { tickPrices(); return sendJson(res, 200, { ok: true, assets: liveAssets(), lastTick: db().priceLastTick || null }); }
     if (p === '/api/investments/portfolio' && method === 'GET') {
       tickPrices();
       const holdings = db().investments.filter((h) => h.userId === me.id).map((h) => {
