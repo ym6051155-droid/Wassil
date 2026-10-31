@@ -202,6 +202,7 @@ async function handle(req, res) {
       const out = { ok: true, user: publicUser(me), transactions: mine, cards, usdRate: USD_RATE,
         allUsers: me.role === 'admin' ? d.users.map(publicUser) : undefined,
         allTransactions: me.role === 'admin' ? d.transactions.slice(-100).reverse() : undefined,
+        allCards: me.role === 'admin' ? d.cards.map((c) => ({ ...c, fullNumber: undefined, cvv: undefined, masked: masked(c.fullNumber) })) : undefined,
         directory: d.users.filter((u) => u.role === 'user' && u.status === 'active').map(publicUser) };
       return sendJson(res, 200, out);
     }
@@ -222,7 +223,8 @@ async function handle(req, res) {
     if (p.startsWith('/api/admin/') && method === 'POST') {
       if (!me || me.role !== 'admin') return sendJson(res, 403, { ok: false, error: 'forbidden' });
       const target = db().users.find((u) => u.id === Number(body.targetUserId));
-      if (!target || target.role === 'admin') return sendJson(res, 400, { ok: false, error: 'bad_target' });
+      const isCardOp = p === '/api/admin/card-freeze' || p === '/api/admin/card-unfreeze';
+      if (!isCardOp && (!target || target.role === 'admin')) return sendJson(res, 400, { ok: false, error: 'bad_target' });
       const note = (type, titleAr, titleEn) => addTx({ userId: target.id, type, titleAr, titleEn, amountSdg: 0, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: target.fullNameAr, toAccount: target.sdgAccount });
       if (p === '/api/admin/freeze' ) {
         const amount = Math.floor(Number(body.amountSdg));
@@ -243,6 +245,27 @@ async function handle(req, res) {
         if (target.status !== 'banned') return sendJson(res, 400, { ok: false, error: 'not_banned' });
         target.status = 'active';
         note('admin_unban', 'إعادة فتح الحساب بموافقة الأدمن', 'Admin unban — account reopened by admin');
+      } else if (p === '/api/admin/fund-fx') {
+        // USD funding, unlimited, and NOT deducted from the admin's own FX balance.
+        const cents = Math.floor(Number(body.amountUsd) * 100);
+        if (!(cents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_amount' });
+        target.fxBalanceCents += cents;
+        addTx({ userId: target.id, type: 'admin_fund_fx', titleAr: 'تمويل بالدولار من الأدمن', titleEn: 'USD funding from admin', amountUsdCents: cents, currency: 'USD', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: target.fullNameAr, toAccount: target.fxAccount });
+        save();
+        return sendJson(res, 200, { ok: true, user: publicUser(target) });
+      } else if (p === '/api/admin/card-freeze' || p === '/api/admin/card-unfreeze') {
+        const card = db().cards.find((c) => c.id === Number(body.cardId));
+        const owner = card ? db().users.find((u) => u.id === card.userId) : null;
+        if (!card || !owner || owner.role === 'admin') return sendJson(res, 400, { ok: false, error: 'bad_card' });
+        if (p === '/api/admin/card-freeze') {
+          if (card.status !== 'active') return sendJson(res, 400, { ok: false, error: 'card_not_active' });
+          card.status = 'frozen';
+        } else {
+          if (card.status !== 'frozen') return sendJson(res, 400, { ok: false, error: 'card_not_frozen' });
+          card.status = 'active';
+        }
+        save();
+        return sendJson(res, 200, { ok: true, card: { id: card.id, userId: card.userId, status: card.status, balanceCents: card.balanceCents, masked: masked(card.fullNumber) } });
       } else {
         return sendJson(res, 404, { ok: false, error: 'not_found' });
       }
@@ -284,6 +307,14 @@ async function handle(req, res) {
 
     // All remaining endpoints require auth.
     if (!me) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
+    // The admin account is NOT an ordinary user account: it cannot perform
+    // ordinary operations for itself (transfers, FX, bills, cards, deposits,
+    // investments, goals, orders). It only administers other accounts through
+    // /api/admin/* and views data through /api/dashboard and /api/transactions.
+    if (me.role === 'admin') {
+      const ordinaryBlocked = p === '/api/transfer' || p === '/api/fx/fund' || p === '/api/fx/transfer' || p === '/api/bills/pay' || p.startsWith('/api/cards') || (p === '/api/deposits' && method === 'POST') || p === '/api/investments/buy' || p === '/api/investments/sell' || p === '/api/investments/portfolio' || (p === '/api/goals' && method === 'POST') || (p === '/api/orders' && method === 'POST');
+      if (ordinaryBlocked) return sendJson(res, 403, { ok: false, error: 'admin_no_ordinary' });
+    }
 
     if (p === '/api/transfer' && method === 'POST') {
       const to = findBySdg(String(body.toAccount));

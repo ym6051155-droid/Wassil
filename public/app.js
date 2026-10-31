@@ -284,6 +284,17 @@ function servicesView(){
 }
 function accountView(){
   if (!me) return loginView();
+  if (me.role === 'admin') return `<div class="page-title">${lang === 'en' ? 'Admin account' : 'حساب الأدمن'}</div><p class="page-sub">${lang === 'en' ? 'This is not an ordinary user account. It only administers other accounts.' : 'هذا ليس حساب مستخدم عادي. هو حساب إداري فقط لإدارة حسابات الآخرين.'}</p>
+  <div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc((nameOf(me) || 'و').trim().charAt(0) || 'و')}</div><div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${lang === 'en' ? 'Admin account — Wassil' : 'حساب الأدمن — وصل'}</div></div></div>
+  <div class="acct-row"><span class="acct-ic">${IC.mail}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${t('email')}</span><span class="acct-row-sub" style="display:block">${esc(me.email)}</span></span><span class="pill-active">${t('active')}</span></div></div>
+  <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title">${lang === 'en' ? 'Admin powers' : 'صلاحيات الأدمن'}</span></span></div>
+  <p class="muted">${lang === 'en' ? '• Fund any account in SDG or USD, unlimited, without deduction from the admin balance.' : '• تمويل أي حساب بالجنيه أو بالدولار، بلا حد، ومن غير خصم من رصيد الأدمن.'}</p>
+  <p class="muted">${lang === 'en' ? '• Freeze a specific amount, freeze all assets, ban an account, and release freezes and bans.' : '• تجميد مبلغ معين، تجميد كل الأصول، حظر حساب، وفك التجميد والحظر.'}</p>
+  <p class="muted">${lang === 'en' ? '• Stop (freeze) and restart any user card.' : '• إيقاف (تجميد) أي بطاقة مستخدم وإعادة تشغيلها.'}</p>
+  <p class="muted">${lang === 'en' ? 'The admin cannot transfer, pay bills, or trade for itself — those are ordinary-user operations.' : 'الأدمن لا يحول ولا يدفع فواتير ولا يتداول لنفسه — دي عمليات المستخدم العادي فقط.'}</p></div>
+  <button class="btn" onclick="go('admin')">${lang === 'en' ? 'Open admin dashboard' : 'فتح لوحة الأدمن'}</button>
+  <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
+  <div class="demo-foot">${t('demoNote')}</div>`;
   const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
   const others = (dash?.directory || []).filter(u => u.id !== me.id);
   const ben = others.map(u => `<button type="button" class="menu-row" onclick="go('transfer')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet' : 'لا يوجد مستفيدون بعد'}</p>`;
@@ -566,6 +577,14 @@ function receiptView(){
   <button class="btn" onclick="downloadReceipt()">↓ ${t('downloadReceipt')}</button>
   <button class="btn-outline" onclick="go('statement')">${t('backStatement')}</button>`;
 }
+function adminCardsHtml(u){
+  const cards = (dash && dash.allCards ? dash.allCards : []).filter(c => c.userId === u.id);
+  if (!cards.length) return '<p class="muted">' + (lang === 'en' ? 'No cards' : 'لا توجد بطاقات') + '</p>';
+  return '<div>' + cards.map(c => {
+    const st = c.status === 'frozen' ? (lang === 'en' ? 'Stopped' : 'متوقفة') : (c.status === 'active' ? t('active') : esc(c.status || ''));
+    return '<div class="row"><span>' + esc(c.masked || '') + ' — ' + st + ' — ' + moneyUsd(c.balanceCents) + '</span><span><button class="btn secondary" style="width:auto;padding:8px 12px;min-height:0" onclick="adminCardFreeze(' + c.id + ')">' + (lang === 'en' ? 'Stop card' : 'إيقاف البطاقة') + '</button> <button class="btn secondary" style="width:auto;padding:8px 12px;min-height:0" onclick="adminCardUnfreeze(' + c.id + ')">' + (lang === 'en' ? 'Restart card' : 'إعادة تشغيل البطاقة') + '</button></span></div>';
+  }).join('') + '</div>';
+}
 function adminView(){
   const all = dash?.allUsers || [];
   const active = (dash?.directory || []);
@@ -574,6 +593,7 @@ function adminView(){
     `<div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc((nameOf(u) || 'و').trim().charAt(0) || 'و')}</div><div><div class="profile-name">${esc(nameOf(u))}</div><div class="profile-role" style="direction:ltr;text-align:start">${esc(u.email)}</div></div><span class="pill-active">${u.status === 'banned' ? (lang === 'en' ? 'Banned' : 'محظور') : (u.status === 'active' ? t('active') : esc(u.status || ''))}</span></div>
     <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(u.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(u.sdgBalance)}</span></div>
     <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(u.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(u.fxBalanceCents)}</span></div>
+    ${u.role === 'admin' ? '' : adminCardsHtml(u)}
     ${u.role === 'admin' ? '' : `<p class="muted">${u.frozenAll ? (lang === 'en' ? 'All assets frozen' : 'كل الأصول مجمدة') : ((u.frozenSdg || 0) > 0 ? (lang === 'en' ? `Frozen: ${moneySdg(u.frozenSdg)}` : `مبلغ مجمد: ${moneySdg(u.frozenSdg)}`) : (lang === 'en' ? 'No freeze' : 'لا يوجد تجميد'))}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="fz-${u.id}" type="number" min="1" placeholder="${lang === 'en' ? 'Freeze amount (SDG)' : 'مبلغ التجميد (ج.س)'}" style="flex:1;min-width:120px"><button class="btn secondary" style="width:auto" onclick="adminFreeze(${u.id})">${lang === 'en' ? 'Freeze amount' : 'تجميد مبلغ'}</button></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn secondary" style="width:auto" onclick="adminFreezeAll(${u.id})">${lang === 'en' ? 'Freeze all' : 'تجميد الكل'}</button><button class="btn secondary" style="width:auto" onclick="adminUnfreeze(${u.id})">${lang === 'en' ? 'Unfreeze' : 'فك التجميد'}</button>${u.status === 'banned' ? `<button class="btn" style="width:auto" onclick="adminUnban(${u.id})">${lang === 'en' ? 'Approve reopen' : 'الموافقة على إعادة الفتح'}</button>` : `<button class="btn-outline-danger" style="width:auto" onclick="adminBan(${u.id})">${lang === 'en' ? 'Ban' : 'حظر'}</button>`}</div>`}</div>`).join('') || `<p class="muted">${lang === 'en' ? 'No registered users yet' : 'لا يوجد مستخدمون مسجلون بعد'}</p>`;
@@ -585,6 +605,11 @@ function adminView(){
   <select id="ad-user"><option value="">${lang === 'en' ? '— Pick an activated user —' : '— اختر مستخدماً مفعلاً —'}</option>${opts}</select>
   <label>${t('amount')} (SDG)</label><input id="ad-amt" type="number" min="1">
   <button class="btn" onclick="adminFund()">${lang === 'en' ? 'Fund now' : 'تمويل الآن'}</button><div id="ad-err" class="err"></div></div>
+  <div class="card"><h2>${lang === 'en' ? 'Fund in USD' : 'تمويل بالدولار'}</h2><p class="muted">${lang === 'en' ? 'Unlimited — not deducted from the admin balance.' : 'بلا حد — لا يخصم من رصيد الأدمن.'}</p>
+  <label>${lang === 'en' ? 'Activated user account' : 'حساب المستخدم'}</label>
+  <select id="ad-fx-user"><option value="">${lang === 'en' ? '— Pick an activated user —' : '— اختر مستخدماً مفعلاً —'}</option>${opts}</select>
+  <label>${t('amount')} (USD)</label><input id="ad-fx-amt" type="number" min="0.01" step="0.01">
+  <button class="btn" onclick="adminFundFx()">${lang === 'en' ? 'Fund in USD now' : 'تمويل بالدولار الآن'}</button><div id="ad-fx-err" class="err"></div></div>
   <div class="page-title" style="margin-top:18px">${lang === 'en' ? `All registered accounts (${all.length})` : `كل الحسابات المسجلة (${all.length})`}</div>${users}
   <div class="page-title" style="margin-top:18px">${lang === 'en' ? 'Transfer and transaction log' : 'سجل التحويل والمعاملات'}</div>
   <div class="card">${txRows}</div>
@@ -609,6 +634,8 @@ function simpleView(title, body, backView, subtitle){
 }
 function render(){
   document.documentElement.lang = lang; document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
+  // Admin lands only on admin views: the admin account is not an ordinary account.
+  if (me && me.role === 'admin' && !['login', 'signup', 'admin', 'account'].includes(view)) view = 'admin';
   let html = '';
   if (view === 'login') html = loginView();
   else if (view === 'signup') html = signupView();
@@ -641,7 +668,9 @@ function render(){
   if (nav) {
     nav.classList.toggle('hidden', !logged);
     document.body.classList.toggle('nav-on', logged);
-    const activeFor = { home: 'home', transfer: 'transfer', bills: 'bills', services: 'services', account: 'account' }[view];
+    document.querySelectorAll('[data-nav]').forEach(b => { b.style.display = ''; });
+    if (me && me.role === 'admin') document.querySelectorAll('[data-nav="transfer"], [data-nav="bills"], [data-nav="services"]').forEach(b => { b.style.display = 'none'; });
+    const activeFor = { home: 'home', transfer: 'transfer', bills: 'bills', services: 'services', account: 'account', admin: 'home' }[view];
     document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === activeFor));
     const navLabels = { home: lang === 'en' ? 'Home' : 'الرئيسية', transfer: lang === 'en' ? 'Transfer' : 'تحويل', bills: lang === 'en' ? 'Bills' : 'فواتير', services: lang === 'en' ? 'Services' : 'الخدمات', account: lang === 'en' ? 'My account' : 'حسابي' };
     document.querySelectorAll('[data-nav]').forEach(b => { const sp = b.querySelector('span'); if (sp && navLabels[b.dataset.nav]) sp.textContent = navLabels[b.dataset.nav]; });
@@ -772,6 +801,13 @@ async function adminFreeze(id){ const el = document.getElementById('fz-' + id); 
 async function adminFreezeAll(id){ await adminAction('/api/admin/freeze-all', { targetUserId: id }); }
 async function adminUnfreeze(id){ await adminAction('/api/admin/unfreeze', { targetUserId: id }); }
 async function adminBan(id){ await adminAction('/api/admin/ban', { targetUserId: id }); }
+async function adminFundFx(){
+  const target = $('#ad-fx-user') ? $('#ad-fx-user').value : '';
+  if (!target) { const el = $('#ad-fx-err'); if (el) el.textContent = lang === 'en' ? 'Pick an activated user' : 'اختر مستخدماً مفعلاً'; return; }
+  try { await api('/api/admin/fund-fx', { method:'POST', body: JSON.stringify({ targetUserId: target, amountUsd: $('#ad-fx-amt').value }) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ const el = $('#ad-fx-err'); if (el) el.textContent = e.message; }
+}
+async function adminCardFreeze(cardId){ await adminAction('/api/admin/card-freeze', { cardId }); }
+async function adminCardUnfreeze(cardId){ await adminAction('/api/admin/card-unfreeze', { cardId }); }
 async function adminUnban(id){ await adminAction('/api/admin/unban', { targetUserId: id }); }
 async function loadBills(){
   try { const j = await api('/api/bills'); $('#bills-list').innerHTML = j.bills.map(b => `<div class="row"><span>${lang==='en'?b.nameEn:b.nameAr} — ${b.amountSdg}</span><button class="btn small" onclick="payBill('${b.id}')">Pay / دفع</button></div>`).join(''); } catch {}
