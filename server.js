@@ -21,10 +21,10 @@ const ASSETS = [
   { id: 'USD', nameAr: 'دولار أمريكي', nameEn: 'US Dollar', category: 'currency', priceSdg: 10000, unitAr: 'دولار', unitEn: 'USD' },
   { id: 'EUR', nameAr: 'يورو', nameEn: 'Euro', category: 'currency', priceSdg: 10850, unitAr: 'يورو', unitEn: 'EUR' },
   { id: 'AED', nameAr: 'درهم إماراتي', nameEn: 'UAE Dirham', category: 'currency', priceSdg: 2720, unitAr: 'درهم', unitEn: 'AED' },
-  { id: 'GOLD', nameAr: 'ذهب', nameEn: 'Gold', category: 'gold', priceSdg: 185000, unitAr: 'غرام', unitEn: 'gram' },
-  { id: 'STK-A', nameAr: 'سهم تجريبي أ', nameEn: 'Demo Stock A', category: 'stock', priceSdg: 2500, unitAr: 'سهم', unitEn: 'share' },
-  { id: 'STK-B', nameAr: 'سهم تجريبي ب', nameEn: 'Demo Stock B', category: 'stock', priceSdg: 4000, unitAr: 'سهم', unitEn: 'share' },
-  { id: 'STK-C', nameAr: 'سهم تجريبي ج', nameEn: 'Demo Stock C', category: 'stock', priceSdg: 1750, unitAr: 'سهم', unitEn: 'share' },
+  { id: 'GOLD', nameAr: 'ذهب', nameEn: 'Gold', category: 'gold', priceSdg: 1010000, unitAr: 'غرام', unitEn: 'gram' },
+  { id: 'STK-A', nameAr: 'شركة النيل للتجارة', nameEn: 'Nile Trading Company', category: 'stock', priceSdg: 2500, unitAr: 'سهم', unitEn: 'share' },
+  { id: 'STK-B', nameAr: 'شركة الخرطوم للصناعات', nameEn: 'Khartoum Industries Company', category: 'stock', priceSdg: 4000, unitAr: 'سهم', unitEn: 'share' },
+  { id: 'STK-C', nameAr: 'شركة الصحراء للطاقة', nameEn: 'Sahara Energy Company', category: 'stock', priceSdg: 1750, unitAr: 'سهم', unitEn: 'share' },
 ];
 
 const BILLS = [
@@ -711,6 +711,10 @@ async function handle(req, res) {
     function tickPrices(){
       const d = db();
       if (!d.investPrices) { d.investPrices = {}; ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); }
+      // Base prices changed (e.g. gold repriced): reset live prices to the new bases once,
+      // so old prices are not clamped into the new range mid-flight. Movement resumes from the new bases.
+      const basesKey = ASSETS.map(a => a.id + ':' + a.priceSdg).join(',');
+      if (d.investBases !== basesKey) { ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); d.investBases = basesKey; d.priceLastTick = Date.now(); save(); return; }
       if (!d.priceLastTick) { d.priceLastTick = Date.now(); save(); return; }
       const steps = Math.min(Math.floor((Date.now() - d.priceLastTick) / PRICE_TICK_MS), PRICE_MAX_STEPS);
       if (steps <= 0) return;
