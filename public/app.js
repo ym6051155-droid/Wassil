@@ -150,7 +150,8 @@ async function api(path, opts={}) {
   return j;
 }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function moneySdg(n){ return (n||0).toLocaleString('en-US') + ' ج.س'; }
+function moneySdg(n){ return (n||0).toLocaleString('en-US') + (lang === 'en' ? ' SDG' : ' ج.س'); }
+function brandName(){ return lang === 'en' ? 'Wassil' : 'وصّل'; }
 function moneyUsd(cents){ return ((cents||0)/100).toFixed(2) + ' USD'; }
 function txTitle(tx){ return lang === 'en' ? (tx.titleEn || tx.titleAr) : (tx.titleAr || tx.titleEn); }
 function txAmount(tx){
@@ -208,7 +209,7 @@ function loginView(){
     ? `<button class="btn secondary" id="fpLoginBtn" onclick="doFpLogin()">${t('fingerprintLogin')}</button>`
     : `<div class="notice-amber">${t('fpUnavailable')}</div>`;
   return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
-  <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">وصّل</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
+  <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
   <div class="auth-card"><h2>${t('login')}</h2>
   <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="li-email" type="email" placeholder="name@example.com"></div>
   <label>${t('password')}</label><div class="input-wrap">${IC.lock}<input id="li-pass" type="password"><button type="button" class="eye-btn" onclick="const e=document.getElementById('li-pass');e.type=e.type==='password'?'text':'password';">${IC.eye}</button></div>
@@ -225,7 +226,7 @@ function loginView(){
 }
 function signupView(){
   return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
-  <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">وصّل</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
+  <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
   <div class="auth-card"><h2>${t('signup')}</h2>
   <p class="muted">كود التفعيل تجريبي يظهر داخل التطبيق — لم يُرسل أي بريد حقيقي. / Demo activation code is shown in-app — no real email is sent.</p>
   <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="su-email" type="email"></div>
@@ -304,8 +305,8 @@ function statementView(){
   return `${backLink(t('backHome'), 'home')}
   <div class="page-title">${t('statement')}</div><p class="page-sub">${t('statementSub')}</p>
   <div class="summary-row">
-    <div class="summary-card"><b class="pos">${moneySdg(inSdg)}</b><span>${t('totalIn')} (ج.س)</span></div>
-    <div class="summary-card"><b class="neg">${moneySdg(outSdg)}</b><span>${t('totalOut')} (ج.س)</span></div>
+    <div class="summary-card"><b class="pos">${moneySdg(inSdg)}</b><span>${t('totalIn')} (${lang === 'en' ? 'SDG' : 'ج.س'})</span></div>
+    <div class="summary-card"><b class="neg">${moneySdg(outSdg)}</b><span>${t('totalOut')} (${lang === 'en' ? 'SDG' : 'ج.س'})</span></div>
     <div class="summary-card"><b>${txs.length}</b><span>${t('opsCount')}</span></div>
   </div>
   <button type="button" class="btn-outline" onclick="downloadStatementText()">${t('downloadText')}</button>
@@ -455,7 +456,7 @@ function cardsView(){
     ? (lang === 'en' ? 'Fingerprint is available on this device — open a card page and use the eye icon to show its full details.' : 'البصمة متاحة على هذا الجهاز — افتح صفحة أي بطاقة واستخدم أيقونة العين لعرض تفاصيلها كاملة.')
     : t('fpUnavailable');
   const list = cards.map(c =>
-    `<div><div class="visa" onclick="openCard(${c.id})"><div style="display:flex;justify-content:space-between;gap:8px"><span>وصل</span><span>VISA ${esc(c.kind || '')}</span></div><div class="num">${esc(c.masked)}</div><div style="display:flex;justify-content:space-between;gap:8px"><span>${lang === 'en' ? 'Balance: ' : 'الرصيد: '}${moneyUsd(c.balanceCents)}</span><span>${lang === 'en' ? 'Daily limit: ' : 'الحد اليومي: '}${moneyUsd((c.dailyLimitUsd || 0) * 100)}</span></div><div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px"><span>${lang === 'en' ? 'Valid to: ' : 'صالحة حتى: '}${esc(c.exp || '')}</span><span>${lang === 'en' ? 'Tap to open card page' : 'اضغط لفتح صفحة البطاقة'} ›</span></div></div><div style="text-align:end;margin:-4px 0 14px"><span class="pill-active">${statusLabel(c.status)}</span></div></div>`).join('') || `<p class="muted">—</p>`;
+    `<div><div class="visa" onclick="openCard(${c.id})"><div style="display:flex;justify-content:space-between;gap:8px"><span>${brandName()}</span><span>VISA ${esc(c.kind || '')}</span></div><div class="num">${esc(c.masked)}</div><div style="display:flex;justify-content:space-between;gap:8px"><span>${lang === 'en' ? 'Balance: ' : 'الرصيد: '}${moneyUsd(c.balanceCents)}</span><span>${lang === 'en' ? 'Daily limit: ' : 'الحد اليومي: '}${moneyUsd((c.dailyLimitUsd || 0) * 100)}</span></div><div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px"><span>${lang === 'en' ? 'Valid to: ' : 'صالحة حتى: '}${esc(c.exp || '')}</span><span>${lang === 'en' ? 'Tap to open card page' : 'اضغط لفتح صفحة البطاقة'} ›</span></div></div><div style="text-align:end;margin:-4px 0 14px"><span class="pill-active">${statusLabel(c.status)}</span></div></div>`).join('') || `<p class="muted">—</p>`;
   return `${backLink(t('backServices'), 'services')}
   <div class="page-title">${t('cards')}</div><p class="page-sub">${t('cardsIntro')}</p>
   <div class="card"><div style="font-weight:900;margin-bottom:6px">${t('fpNoticeTitle')}</div><p class="muted" style="margin:0">${fpNote}</p></div>
@@ -473,7 +474,7 @@ function cardPageView(){
     : `<button type="button" class="svc-card" onclick="freezeCard()"><span class="svc-ic">${IC.shield}</span><span class="svc-title" style="display:block">${t('freeze')}</span></button>`;
   return `${backLink(t('backCards'), 'cards')}
   <div class="page-title">${t('cardPageTitle')}</div><p class="page-sub">${esc(c.kind || '')} · ${esc(c.masked)}</p>
-  <div class="visa"><div style="display:flex;justify-content:space-between;gap:8px"><span>وصل</span><span>VISA ${esc(c.kind || '')}</span></div>
+  <div class="visa"><div style="display:flex;justify-content:space-between;gap:8px"><span>${brandName()}</span><span>VISA ${esc(c.kind || '')}</span></div>
   <div class="num" id="cardNum" style="display:flex;align-items:center;gap:10px;justify-content:space-between"><span>${esc(c.masked)}</span><button type="button" class="eye-btn" style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer" onclick="toggleEye()">${IC.eye}</button></div>
   <div style="display:flex;justify-content:space-between;gap:8px"><span>${lang === 'en' ? 'Balance: ' : 'الرصيد: '}${moneyUsd(c.balanceCents)}</span><span>${lang === 'en' ? 'Daily limit: ' : 'الحد اليومي: '}${moneyUsd((c.dailyLimitUsd || 0) * 100)}</span></div>
   <div style="margin-top:6px">${lang === 'en' ? 'Valid to: ' : 'صالحة حتى: '}${esc(c.exp || '')}</div></div>
@@ -534,7 +535,7 @@ function receiptView(){
   return `${backLink(t('backStatement'), 'statement')}
   <div class="page-title">${t('receiptTitle')}</div><p class="page-sub">${t('receiptSub')}</p>
   <div class="receipt" id="receiptCard">
-    <div class="receipt-head"><div class="receipt-logo">${WAVE}</div><div><div class="receipt-name">وصّل</div><div class="receipt-sub">${t('receiptTitle')}</div></div><span class="badge">تجريبي</span></div>
+    <div class="receipt-head"><div class="receipt-logo">${WAVE}</div><div><div class="receipt-name">${brandName()}</div><div class="receipt-sub">${t('receiptTitle')}</div></div><span class="badge">تجريبي</span></div>
     <div class="receipt-check"><span class="check-circle">✓</span><span class="pill-active">${lang === 'en' ? 'Completed' : 'مكتملة'}</span></div>
     <div class="receipt-amount ${neg ? 'neg' : 'pos'}">${esc(txAmount(tx))}</div>
     <div class="receipt-op">${t('operationOnAccount')}</div>
@@ -777,7 +778,7 @@ function downloadReceipt(){
   const x = c.getContext('2d');
   x.fillStyle = '#ffffff'; x.fillRect(0,0,900,1100);
   x.fillStyle = '#0f766e'; x.fillRect(0,0,900,140);
-  x.fillStyle = '#ffffff'; x.font = 'bold 44px sans-serif'; x.fillText('Wassil  وصل', 40, 85);
+  x.fillStyle = '#ffffff'; x.font = 'bold 44px sans-serif'; x.fillText(brandName(), 40, 85);
   x.fillStyle = '#f59e0b'; x.fillRect(700, 45, 150, 50); x.fillStyle = '#111827'; x.font = 'bold 26px sans-serif'; x.fillText('تجريبي', 735, 80);
   x.fillStyle = '#111827'; x.font = '28px sans-serif';
   const rows = [[ 'Type / النوع', txTitle(tx)], ['Amount / المبلغ', txAmount(tx)], ['From / من', (tx.fromName||'')+' — '+(tx.fromAccount||'')], ['To / إلى', (tx.toName||'')+' — '+(tx.toAccount||'')], ['Date / التاريخ', new Date(tx.createdAt).toLocaleString()], ['Reference / المرجع', tx.ref||''], ['Status / الحالة', 'completed / مكتملة']];
@@ -792,5 +793,6 @@ function downloadReceipt(){
 }
 (async () => {
   const splash = document.getElementById('splash');
+  if (splash && lang === 'en') { const sn = splash.querySelector('.splash-name'); if (sn) sn.textContent = 'Wassil'; const st = splash.querySelector('.splash-tag'); if (st) st.textContent = 'Your money arrives... easily'; }
   setTimeout(async () => { if (splash) splash.classList.add('hidden'); if (token) { await loadDash(); if (me) view = 'home'; } render(); }, 1200);
 })();
