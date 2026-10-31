@@ -214,6 +214,20 @@ function pinSheet(title){
     const inp = back.querySelector('#pin-inp'); setTimeout(() => inp.focus(), 50);
   });
 }
+function qtySheet(title){
+  return new Promise((resolve) => {
+    const back = document.createElement('div'); back.className = 'sheet-back';
+    back.innerHTML = `<div class="sheet"><div class="sheet-title">${esc(title)}</div>
+    <input id="qty-inp" type="number" inputmode="decimal" min="0" step="any" autocomplete="off" style="font-size:22px;text-align:center">
+    <div class="sheet-actions"><button type="button" class="btn secondary" id="sheet-cancel">${esc(lang === 'en' ? 'Cancel' : 'إلغاء')}</button><button type="button" class="btn" id="sheet-ok">${esc(lang === 'en' ? 'Confirm' : 'تأكيد')}</button></div></div>`;
+    const done = (v) => { back.remove(); resolve(v); };
+    back.querySelector('#sheet-ok').onclick = () => { const v = back.querySelector('#qty-inp').value.trim(); if (!(Number(v) > 0)) { back.querySelector('#qty-inp').style.borderColor = '#dc2626'; return; } done(v); };
+    back.querySelector('#sheet-cancel').onclick = () => done(null);
+    back.onclick = (e) => { if (e.target === back) done(null); };
+    document.body.appendChild(back);
+    const inp = back.querySelector('#qty-inp'); setTimeout(() => inp.focus(), 50);
+  });
+}
 // In-app confirmation sheet (Wassil design) — replaces the browser's native
 // confirm() dialog, whose title bar showed the site URL and clashed with the app.
 function confirmSheet({ title, lines = [], note = '', confirmLabel, cancelLabel, danger = false }) {
@@ -1106,11 +1120,11 @@ async function loadInvest(){
   } catch(e){ const el = $('#inv-err'); if (el) el.textContent = e.message; }
 }
 async function buyAsset(id){
-  const q = prompt('Quantity / الكمية'); if (!q) return;
+  const q = await qtySheet('الكمية / Quantity'); if (q === null) return;
   try { await api('/api/investments/buy', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message, 'err'); }
 }
 async function sellAsset(id){
-  const q = prompt('Quantity / الكمية'); if (!q) return;
+  const q = await qtySheet('الكمية / Quantity'); if (q === null) return;
   try { await api('/api/investments/sell', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message, 'err'); }
 }
 function adminResolveByNumber(num){
@@ -1201,21 +1215,132 @@ async function doFpLogin(){
 }
 function downloadReceipt(){
   const tx = selTx; if (!tx) return;
-  const c = document.createElement('canvas'); c.width = 900; c.height = 1100;
-  const x = c.getContext('2d');
-  x.fillStyle = '#ffffff'; x.fillRect(0,0,900,1100);
-  x.fillStyle = '#0f766e'; x.fillRect(0,0,900,140);
-  x.fillStyle = '#ffffff'; x.font = 'bold 44px sans-serif'; x.fillText(brandName(), 40, 85);
-  x.fillStyle = '#111827'; x.font = '28px sans-serif';
-  const rows = [[ 'Type / النوع', txTitle(tx)], ['Amount / المبلغ', txAmount(tx)], ['From / من', (tx.fromName||'')+' — '+(tx.fromAccount||'')], ['To / إلى', (tx.toName||'')+' — '+(tx.toAccount||'')], ['Date / التاريخ', new Date(tx.createdAt).toLocaleString()], ['Reference / المرجع', tx.ref||''], ['Status / الحالة', 'completed / مكتملة']];
-  let y = 210;
-  for (const [k,v] of rows) { x.fillText(k, 40, y); x.fillText(String(v), 40, y+38); y += 95; }
-  x.font = '22px sans-serif'; x.fillStyle = '#6b7280'; x.fillText('Wassil receipt — إشعار من وصل.', 40, y+20);
-  c.toBlob((blob) => {
-    if (!blob) { alert('Download failed / فشل التحميل'); return; }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wassil-receipt-' + (tx.ref || tx.id) + '.png'; a.click();
-    toast(t('downloaded'));
-  }, 'image/png');
+  (async () => {
+  try {
+    // Wait for the site font before drawing, so Arabic shapes render with
+    // the real font instead of a fallback (this was the distortion cause).
+    if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch {} }
+    const FONT = 'system-ui,-apple-system,"Segoe UI",Tahoma,"Noto Naskh Arabic",Arial,sans-serif';
+    const W = 900, PAD = 44, rtl = lang === 'ar';
+    const neg = (tx.currency === 'USD' ? (tx.amountUsdCents || 0) : (tx.amountSdg || 0)) < 0;
+    const d = new Date(tx.createdAt);
+    const dt = isNaN(d) ? '' : d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const conv = tx.conversion || ((tx.currency === 'USD' && tx.amountUsdCents != null && tx.amountSdg)
+      ? `${moneySdg(Math.abs(tx.amountSdg))} ← ${moneyUsd(Math.abs(tx.amountUsdCents))}` : '');
+    const rows = [
+      [lang === 'en' ? 'Operation type' : 'نوع العملية', txTitle(tx)],
+      [lang === 'en' ? 'Amount' : 'المبلغ', txAmount(tx)],
+      [lang === 'en' ? 'Currency' : 'العملة', tx.currency || ''],
+      [lang === 'en' ? 'Sender' : 'المرسل', tx.fromName || ''],
+      [lang === 'en' ? 'Sender account' : 'حساب المرسل', tx.fromAccount || ''],
+      [lang === 'en' ? 'Recipient' : 'المستلم', tx.toName || ''],
+      [lang === 'en' ? 'Recipient account' : 'حساب المستلم', tx.toAccount || ''],
+    ];
+    if (conv) rows.push([lang === 'en' ? 'Conversion details' : 'تفاصيل التحويل بين العملات', conv]);
+    rows.push([lang === 'en' ? 'Date and time' : 'التاريخ والوقت', dt]);
+    rows.push([lang === 'en' ? 'Reference number' : 'الرقم المرجعي', tx.ref || '']);
+    rows.push([lang === 'en' ? 'Operation status' : 'حالة العملية', lang === 'en' ? 'Completed' : 'مكتملة']);
+    // Word-boundary wrapping: split on spaces, never mid-word unless a
+    // single word is wider than the column (long refs/accounts).
+    function wrap(ctx, text, maxW){
+      const words = String(text).split(' ');
+      const lines = []; let line = '';
+      for (const w of words) {
+        const trial = line ? line + ' ' + w : w;
+        if (ctx.measureText(trial).width <= maxW || !line) {
+          if (ctx.measureText(trial).width > maxW && !line) {
+            let part = '';
+            for (const ch of w) { if (ctx.measureText(part + ch).width > maxW && part) { lines.push(part); part = ch; } else part += ch; }
+            line = part;
+          } else line = trial;
+        } else { lines.push(line); line = w; }
+      }
+      if (line) lines.push(line);
+      return lines.length ? lines : [''];
+    }
+    function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+    // Measure pass (same fonts as the draw pass) to get the exact height.
+    const mc = document.createElement('canvas').getContext('2d');
+    mc.font = '26px ' + FONT;
+    const labelWs = rows.map(([k]) => mc.measureText(k).width);
+    const labelCol = Math.max(...labelWs) + 8;
+    const valMaxW = W - PAD * 2 - labelCol - 28;
+    mc.font = '800 28px ' + FONT;
+    const rowLines = rows.map(([, v]) => wrap(mc, v, valMaxW));
+    const rowH = rowLines.map(ls => ls.length * 36 + 30);
+    const qrSize = 360;
+    const H = PAD + 150 + 40 + 147 + 58 + 20 + rowH.reduce((a, b) => a + b, 0) + 12 + 24 + qrSize + 40 + 24 + 40;
+    const c = document.createElement('canvas'); c.width = W; c.height = Math.ceil(H);
+    const x = c.getContext('2d');
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
+    x.strokeStyle = '#0f766e'; x.lineWidth = 4; rr(x, 2, 2, W - 4, H - 4, 44); x.stroke();
+    // Header: same teal gradient as the on-screen card.
+    const g = x.createLinearGradient(0, PAD, W - PAD, PAD + 150);
+    g.addColorStop(0, '#0b4f49'); g.addColorStop(1, '#0f766e');
+    x.fillStyle = g; rr(x, PAD, PAD, W - PAD * 2, 150, 32); x.fill();
+    x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = 3; rr(x, PAD + 26, PAD + 26, 98, 98, 26); x.stroke();
+    try {
+      const url = URL.createObjectURL(new Blob([WAVE], { type: 'image/svg+xml;charset=utf-8' }));
+      const img = new Image();
+      await new Promise((res) => { img.onload = res; img.onerror = res; img.src = url; });
+      if (img.naturalWidth) x.drawImage(img, PAD + 26 + 13, PAD + 26 + 13, 72, 72);
+      URL.revokeObjectURL(url);
+    } catch {}
+    x.fillStyle = '#ffffff'; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+    x.font = '900 52px ' + FONT; x.fillText(brandName(), PAD + 150, PAD + 72);
+    x.font = '26px ' + FONT; x.globalAlpha = .92; x.fillText(lang === 'en' ? 'Receipt' : 'إيصال', PAD + 150, PAD + 112); x.globalAlpha = 1;
+    let y = PAD + 150 + 40;
+    // Check row: green soft circle + Completed pill, centered like the card.
+    const pillText = lang === 'en' ? 'Completed' : 'مكتملة';
+    x.font = '800 26px ' + FONT; const pillW = x.measureText(pillText).width + 48;
+    const checkY = y + 55;
+    x.fillStyle = '#dcfce7'; x.beginPath(); x.arc(W / 2 - pillW / 2 - 14 - 44, checkY, 44, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#047857'; x.font = '900 56px ' + FONT; x.textAlign = 'center'; x.fillText('✓', W / 2 - pillW / 2 - 14 - 44, checkY + 20);
+    x.fillStyle = '#dcfce7'; rr(x, W / 2 - pillW / 2 + 14, checkY - 26, pillW, 52, 26); x.fill();
+    x.fillStyle = '#15803d'; x.font = '800 26px ' + FONT; x.fillText(pillText, W / 2 + 14, checkY + 9);
+    y = checkY + 58 + 34;
+    // Amount + operation line, centered like the card.
+    x.textAlign = 'center'; x.fillStyle = neg ? '#dc2626' : '#047857'; x.font = '900 58px ' + FONT;
+    x.fillText(txAmount(tx), W / 2, y); y += 58;
+    x.fillStyle = '#64748b'; x.font = '26px ' + FONT;
+    x.fillText(lang === 'en' ? 'Operation on account' : 'عملية على الحساب', W / 2, y); y += 20;
+    // Detail rows: label/value columns mirrored in RTL, separators like the card.
+    for (let i = 0; i < rows.length; i++) {
+      const [k, v] = rows[i]; const lines = rowLines[i];
+      const labelX = rtl ? W - PAD : PAD;
+      const valueX = rtl ? PAD : W - PAD;
+      x.font = '26px ' + FONT; x.fillStyle = '#64748b'; x.textAlign = rtl ? 'right' : 'left';
+      x.fillText(k, labelX, y + 30);
+      x.font = '800 28px ' + FONT; x.fillStyle = '#0f172a'; x.textAlign = rtl ? 'left' : 'right';
+      lines.forEach((ln, li) => x.fillText(ln, valueX, y + 30 + li * 36));
+      y += rowH[i];
+      if (i < rows.length - 1) { x.strokeStyle = '#f1f5f9'; x.lineWidth = 2; x.beginPath(); x.moveTo(PAD, y - 6); x.lineTo(W - PAD, y - 6); x.stroke(); }
+    }
+    y += 12;
+    // QR block: dashed separator + centered QR, same payload as the card.
+    x.strokeStyle = '#cbd5e1'; x.lineWidth = 2; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(PAD, y); x.lineTo(W - PAD, y); x.stroke(); x.setLineDash([]);
+    y += 24;
+    let qrCanvas = document.querySelector('#receiptCard .qr-real canvas');
+    if (!qrCanvas && window.QRCode) {
+      try {
+        const tmp = document.createElement('div'); tmp.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden';
+        document.body.appendChild(tmp);
+        new QRCode(tmp, { text: window.location.origin + '/?ref=' + encodeURIComponent(tx.ref || String(tx.id)), width: qrSize, height: qrSize, correctLevel: QRCode.CorrectLevel.M });
+        await new Promise(r => setTimeout(r, 50));
+        qrCanvas = tmp.querySelector('canvas'); tmp.remove();
+      } catch {}
+    }
+    if (qrCanvas) x.drawImage(qrCanvas, (W - qrSize) / 2, y, qrSize, qrSize);
+    y += qrSize + 40;
+    x.textAlign = 'left'; x.fillStyle = '#6b7280'; x.font = '24px ' + FONT;
+    x.fillText('Wassil receipt — إشعار من وصل.', PAD, y);
+    c.toBlob((blob) => {
+      if (!blob) { alert('Download failed / فشل التحميل'); return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wassil-receipt-' + (tx.ref || tx.id) + '.png'; a.click();
+      toast(t('downloaded'));
+    }, 'image/png');
+  } catch (e) { alert('Download failed / فشل التحميل'); }
+  })();
 }
 (async () => {
   const splash = document.getElementById('splash');
