@@ -153,6 +153,9 @@ async function handle(req, res) {
       if (!isQuadruple(fullNameAr)) return sendJson(res, 400, { ok: false, error: 'name_must_be_quadruple_ar' });
       if (!isQuadruple(fullNameEn) || !isLatin(fullNameEn)) return sendJson(res, 400, { ok: false, error: 'name_must_be_quadruple_en' });
       if (!password || password.length < 4) return sendJson(res, 400, { ok: false, error: 'password_too_short' });
+      // Signup gate: the user must have read + agreed the site policy (which
+      // states this is a demo with fake money) before an account is created.
+      if (body.policyAgreed !== true && body.policyAgreed !== 'true') return sendJson(res, 400, { ok: false, error: 'policy_not_agreed' });
       const d = db();
       if (d.users.some((u) => u.email.toLowerCase() === String(email).toLowerCase())) return sendJson(res, 400, { ok: false, error: 'email_exists' });
       const code = String(Math.floor(100000 + Math.random() * 900000));

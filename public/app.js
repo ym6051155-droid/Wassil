@@ -34,7 +34,7 @@ const I18N = {
   enableFingerprint:{ar:'تفعيل الدخول بالبصمة',en:'Enable fingerprint login'},
   disableFingerprint:{ar:'إلغاء تفعيل البصمة',en:'Disable fingerprint login'},
   welcome:{ar:'مرحباً بك في وصل',en:'Welcome to Wassil'},
-  bankServices:{ar:'خدمات مصرفية تجريبية',en:'Demo banking services'},
+  bankServices:{ar:'خدمات مصرفية',en:'Banking services'},
   tagline:{ar:'قروشك توصل... بساهلة',en:'Your money arrives... easily'},
   demoNote:{ar:'نموذج تجريبي للتعلم — بيانات وهمية، ولا توجد أي أموال حقيقية.',en:'Learning demo only — fake data, no real money.'},
   fpUnavailable:{ar:'البصمة غير متاحة على هذا الجهاز/المتصفح — لا يمكن تسجيل الدخول بالبصمة هنا. سجّل الدخول بكلمة المرور كالمعتاد.',en:'Fingerprint is not available on this device/browser — fingerprint login is not possible here. Sign in with your password as usual.'},
@@ -47,9 +47,9 @@ const I18N = {
   bankServicesPage:{ar:'خدمات البنك',en:'Bank services'},
   allServicesInOne:{ar:'كل وحدات وصل التجريبية في مكان واحد.',en:'All Wassil demo units in one place.'},
   beneficiaries:{ar:'المستفيدون',en:'Beneficiaries'},
-  demoClient:{ar:'عميل تجريبي — وصل',en:'Demo client — Wassil'},
+  demoClient:{ar:'عميل — وصل',en:'Client — Wassil'},
   statement:{ar:'كشف حساب',en:'Statement'},
-  qrShare:{ar:'شارك رمز وصل التجريبي',en:'Share Wassil demo code'},
+  qrShare:{ar:'شارك رمز وصل',en:'Share Wassil code'},
   cannotLogin:{ar:'لا تستطيع تسجيل الدخول؟',en:"Can't sign in?"},
   newSignup:{ar:'تسجيل جديد؟',en:'New sign up?'},
   about:{ar:'عن وصل',en:'About Wassil'},
@@ -57,7 +57,7 @@ const I18N = {
   support:{ar:'المساعدة',en:'Help'},
   active:{ar:'مفعّل',en:'Active'},
   loanCalc:{ar:'محاكاة تمويل',en:'Loan simulator'},
-  qrNote:{ar:'رمز عرض تجريبي فقط — لا يُمسح لتحويل حقيقي.',en:'Display-only demo code — it does not scan for a real transfer.'},
+  qrNote:{ar:'رمز حقيقي: مسحه بيفتح تحويل لهذا الحساب.',en:'A real code: scanning it opens a transfer to this account.'},
   backHome:{ar:'رجوع للرئيسية',en:'Back to home'},
   backServices:{ar:'رجوع للخدمات',en:'Back to services'},
   backCards:{ar:'رجوع لبطاقاتي',en:'Back to my cards'},
@@ -223,7 +223,7 @@ const WAVE = '<svg viewBox="0 0 64 64" width="40" height="40" fill="none" xmlns=
 function userbar(){
   const n = (dash?.transactions || []).length;
   const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
-  return `<div class="userbar"><div class="userbar-main"><div class="avatar">${esc(letter)}</div><div style="min-width:0"><div class="welcome">${t('welcome')} <span class="badge-outline">تجريبي</span></div><div class="user-name">${esc(nameOf(me))}</div></div></div>
+  return `<div class="userbar"><div class="userbar-main"><div class="avatar">${esc(letter)}</div><div style="min-width:0"><div class="welcome">${t('welcome')}</div><div class="user-name">${esc(nameOf(me))}</div></div></div>
   <div class="userbar-actions"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><button type="button" class="icon-pill" aria-label="${t('notifications')}" onclick="go('statement')">${IC.bell}${n ? `<span class="bell-dot">${n > 99 ? '99+' : n}</span>` : ''}</button><button type="button" class="icon-pill" aria-label="${t('logout')}" onclick="doLogout()">${IC.logout}</button></div></div>`;
 }
 function opRow(tx){
@@ -240,7 +240,7 @@ function loginView(){
   const fp = window.PublicKeyCredential
     ? `<button class="btn secondary" id="fpLoginBtn" onclick="doFpLogin()">${t('fingerprintLogin')}</button>`
     : `<div class="notice-amber">${t('fpUnavailable')}</div>`;
-  return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
+  return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button></div>
   <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
   <div class="auth-card"><h2>${t('login')}</h2>
   <label>${lang === 'en' ? 'Email or account number' : 'البريد الإلكتروني أو رقم الحساب'}</label><div class="input-wrap">${IC.mail}<input id="li-email" type="text" placeholder="${lang === 'en' ? 'name@example.com or 1002' : 'name@example.com أو 1002'}"></div>
@@ -251,27 +251,27 @@ function loginView(){
   <div id="li-err" class="err"></div>
   <button type="button" class="qr-btn" onclick="go('qr')">${IC.qr} ${t('qrShare')}</button>
   <div class="link-row"><button type="button" onclick="go('signup')">${t('newSignup')}</button><button type="button" onclick="go('faq')">${t('cannotLogin')}</button></div></div>
-  <div class="auth-footer"><div>${t('demoNote')}</div><div class="auth-links">
+  <div class="auth-footer"><div class="auth-links"><button type="button" class="auth-link" onclick="window._policyReturn='login';go('policies')">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</button>
   <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.info}</span>${t('about')}</button>
   <button type="button" class="auth-link" onclick="go('branches')"><span class="auth-link-ic">${IC.pin}</span>${t('locations')}</button>
   <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.headset}</span>${t('support')}</button></div></div></div>`;
 }
 function signupView(){
-  return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
+  const policyAgreed = localStorage.getItem('wassil-policy-agreed') === '1';
+  return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button></div>
   <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
   <div class="auth-card">${backLink(t('login'), 'login')}<h2>${t('signup')}</h2>
-  <p class="muted">كود التفعيل تجريبي يظهر داخل التطبيق — لم يُرسل أي بريد حقيقي. / Demo activation code is shown in-app — no real email is sent.</p>
   <p class="muted">${lang === 'en' ? 'Welcome bonus: 15,000 SDG on your first account per device.' : 'مكافأة ترحيبية: 15,000 ج.س على أول حساب من كل جهاز.'}</p>
   <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="su-email" type="email"></div>
   <label>${t('nameAr')}</label><input id="su-ar">
   <label>${t('nameEn')}</label><input id="su-en">
   <label>${t('password')}</label><div class="input-wrap">${IC.lock}<input id="su-pass" type="password"></div>
   <label>${lang === 'en' ? 'Invite code (optional)' : 'رمز الدعوة (اختياري)'}</label><input id="su-invite" placeholder="WSL1002">
-  <button class="btn" onclick="doSignup()">${t('signup')}</button>
+  ${policyAgreed ? `<button class="btn" onclick="doSignup()">${t('signup')}</button>` : `<p class="muted">${lang === 'en' ? 'Read the site policy and agree before creating an account.' : 'اقرأ سياسة الموقع ووافق عليها قبل إنشاء الحساب.'}</p><button class="btn" onclick="window._policyReturn='signup';go('policies')">${lang === 'en' ? 'Read site policy' : 'قراءة سياسة الموقع'}</button>`}
   <div id="su-err" class="err"></div><div id="su-ok" class="ok"></div>
   <div id="su-activate" class="hidden"><label>Activation code / كود التفعيل</label><input id="su-code"><button class="btn" onclick="doActivate()">${t('confirm')}</button></div>
   <div class="link-row"><button type="button" onclick="go('login')">${t('login')}</button></div></div>
-  <div class="auth-footer"><div>${t('demoNote')}</div></div></div>`;
+  <div class="auth-footer"><button type="button" class="auth-link" onclick="window._policyReturn='signup';go('policies')">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</button></div></div>`;
 }
 function homeView(){
   if (!me) return loginView();
@@ -303,17 +303,17 @@ function servicesView(){
     [IC.card, t('topup'), L('من الحساب الأجنبي فقط، بالدولار — اشحن الأجنبي من الجنيه بسعر 10,000', 'From the FX account only, in USD — fund FX from SDG at 10,000'), "go('cardTopup')"],
     [IC.transfer, t('cardTransfer'), L('من بطاقة إلى بطاقة فقط — بالدولار', 'USD transfer between Wassil cards only'), "go('cardTransfer')"],
     [IC.bank, t('deposits'), L('أرباح سنوية 12%–30% حسب المبلغ والمدة', 'Term deposits from 24h to a year — 12% to 30% by amount'), "go('deposits')"],
-    [IC.trend, t('invest'), L('عملات وذهب وأسهم تجريبية بأسعار وهمية معلنة', 'Demo currencies, gold and stocks at announced fake prices'), "go('invest')"],
+    [IC.trend, t('invest'), L('عملات وذهب وأسهم بأسعار معلنة', 'Currencies, gold and stocks at announced prices'), "go('invest')"],
     [IC.calc, t('loanCalc'), L('حاسبة أقساط افتراضية 10%', 'Demo instalment calculator at 10% — demo only'), "go('loan')"],
     [IC.repeat, t('orders'), L('تحويلات متكررة مجدولة وهمياً', 'Saved recurring transfers that run automatically'), "go('orders')"],
     [IC.target, t('goals'), L('ادخر نحو هدفك خطوة بخطوة', 'Save towards a goal with a set amount and term'), "go('goals')"],
     [IC.chart, t('statement'), L('الوارد والصادر وكل العمليات', 'All your operations with reference and date'), "go('statement')"],
     [IC.shield, t('security'), L('الرمز، أسئلة الأمان، الأجهزة', 'Fingerprint, password and trusted devices'), "go('security')"],
     [IC.pin, t('branches'), L('قائمة وهمية قابلة للبحث', 'Branch locations and opening hours'), "go('branches')"],
-    [IC.headset, t('faq'), L('أسئلة شائعة عن النموذج التجريبي', 'FAQ and demo support'), "go('faq')"],
+    [IC.headset, t('faq'), L('أسئلة شائعة ودعم', 'FAQ and support'), "go('faq')"],
   ];
   return `${backLink(t('backHome'), 'home')}
-  <div class="page-title">${t('bankServicesPage')}</div><p class="page-sub">${t('allServicesInOne')}</p>
+  <div class="page-title">${t('bankServicesPage')}</div>
   <div class="svc-grid">${items.map(([ic, ti, de, act]) => `<button type="button" class="svc-card" onclick="${act}"><span class="svc-ic">${ic}</span><span class="svc-title" style="display:block">${ti}</span><span class="svc-desc" style="display:block">${de}</span></button>`).join('')}</div>`;
 }
 function accountView(){
@@ -328,11 +328,11 @@ function accountView(){
   <p class="muted">${lang === 'en' ? 'The admin cannot transfer, pay bills, or trade for itself — those are ordinary-user operations.' : 'الأدمن لا يحول ولا يدفع فواتير ولا يتداول لنفسه — دي عمليات المستخدم العادي فقط.'}</p></div>
   <button class="btn" onclick="go('admin')">${lang === 'en' ? 'Open admin dashboard' : 'فتح لوحة الأدمن'}</button>
   <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
-  <div class="demo-foot">${t('demoNote')}</div>`;
+  `;
   const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
   const others = (dash?.directory || []).filter(u => u.id !== me.id);
   const ben = others.map(u => `<button type="button" class="menu-row" onclick="go('transfer')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet' : 'لا يوجد مستفيدون بعد'}</p>`;
-  return `<div class="page-title">${t('myAccount')}</div><p class="page-sub">${lang === 'en' ? 'Your saved demo account data and settings.' : 'بيانات حسابك التجريبي المحفوظ وإعداداته.'}</p>
+  return `<div class="page-title">${t('myAccount')}</div>
   <div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc(letter)}</div><div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${me.role === 'admin' ? (lang === 'en' ? 'Admin account — Wassil' : 'حساب الأدمن — وصل') : t('demoClient')}</div></div></div>
   <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(me.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(me.sdgBalance)}</span></div>
   <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(me.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(me.fxBalanceCents)}</span></div>
@@ -344,10 +344,11 @@ function accountView(){
   <button class="btn secondary" onclick="copyInvite()">${lang === 'en' ? 'Copy invite code' : 'نسخ رمز الدعوة'}</button></div>
   <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${t('beneficiaries')}</span></span></div>${ben}</div>
   <div class="profile-card"><button type="button" class="menu-row" onclick="go('statement')"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('notifications')}</span><span class="menu-row-sub">${lang === 'en' ? 'Your operations and updates' : 'عملياتك وتحديثاتك'}</span></span><span>›</span></button>
-  <button type="button" class="menu-row" onclick="go('security')"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('security')}</span><span class="menu-row-sub">${lang === 'en' ? 'Fingerprint and password' : 'البصمة وكلمة المرور'}</span></span><span>›</span></button></div>
+  <button type="button" class="menu-row" onclick="go('security')"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('security')}</span><span class="menu-row-sub">${lang === 'en' ? 'Fingerprint and password' : 'البصمة وكلمة المرور'}</span></span><span>›</span></button>
+  <button type="button" class="menu-row" onclick="window._policyReturn='account';go('policies')"><span class="acct-ic">${IC.info}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</span></span><span>›</span></button></div>
   ${me.role === 'admin' ? `<div class="profile-card" style="border:1.5px solid var(--teal)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'Admin mode active' : 'وضع الأدمن مفعّل'}</div><p class="muted" style="margin:0 0 12px">${lang === 'en' ? 'Fund user accounts and review registrations from the admin dashboard.' : 'مؤّل حسابات المستخدمين وراجع التسجيلات من لوحة الأدمن.'}</p><button class="btn" onclick="go('admin')">${lang === 'en' ? 'Open admin dashboard' : 'فتح لوحة الأدمن'}</button></div>` : ''}
   <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
-  <div class="demo-foot">${t('demoNote')}</div>`;
+  `;
 }
 function statementView(){
   const txs = dash?.transactions || [];
@@ -462,7 +463,7 @@ function qrView(){
 }
 function scanView(){
   return `${backLink(t('backHome'), 'home')}
-  <div class="page-title">${lang === 'en' ? 'Scan QR code' : 'مسح رمز QR'}</div><p class="page-sub">${lang === 'en' ? 'Point the camera at a Wassil QR code to open a transfer to that account.' : 'وجّه الكاميرا لرمز وصل عشان يفتح تحويل للحساب ده.'}</p>
+  <div class="page-title">${lang === 'en' ? 'Scan QR code' : 'مسح رمز QR'}</div>
   <div class="card" style="text-align:center"><video id="scan-video" playsinline muted style="width:100%;max-width:420px;border-radius:16px;background:#000"></video><canvas id="scan-canvas" style="display:none"></canvas>
   <p class="muted" id="scan-status">${lang === 'en' ? 'Starting camera…' : 'جاري تشغيل الكاميرا…'}</p>
   <button class="btn secondary" onclick="stopScan(); go('home');">${lang === 'en' ? 'Stop camera' : 'إيقاف الكاميرا'}</button></div>`;
@@ -478,7 +479,7 @@ async function copyAccount(){
 }
 function loanView(){
   return `${backLink(t('backServices'), 'services')}
-  <div class="page-title">${t('loanCalc')}</div><p class="page-sub">${lang === 'en' ? 'Demo instalment calculator at 10% per year — demo only, not real financing.' : 'حاسبة أقساط افتراضية بنسبة 10% سنوياً — تجريبي فقط، ليس تمويلاً حقيقياً.'}</p><div class="card">
+  <div class="page-title">${t('loanCalc')}</div><div class="card">
   <label>${t('amount')} (SDG)</label><input id="loan-amt" type="number" min="1">
   <label>${lang === 'en' ? 'Months' : 'عدد الأشهر'}</label><input id="loan-months" type="number" min="1" value="12">
   <button class="btn" onclick="calcLoan()">${t('confirm')}</button><div id="loan-out" class="ok"></div></div>`;
@@ -493,7 +494,7 @@ function transferView(){
   const others = (dash?.directory || []).filter(u => u.id !== me?.id);
   const opts = others.map(u => `<option value="${esc(u.sdgAccount || '')}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
   const list = others.map(u => `<button type="button" class="menu-row" onclick="pickTransferUser('${esc(u.sdgAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No registered users yet' : 'لا يوجد مستخدمون مسجلون بعد'}</p>`;
-  return `<div class="page-title">${t('transferTitle')}</div><p class="page-sub">${t('transferIntro')}</p>
+  return `<div class="page-title">${t('transferTitle')}</div>
   <div class="card">
   <label>${t('beneficiary')}</label>
   <select id="tr-user-select" onchange="onTransferUserChange(this.value)"><option value="">${t('chooseUser')}</option>${opts}<option value="__other__">${t('otherAccount')}</option></select>
@@ -525,7 +526,7 @@ function fxView(){
   <label>${t('amountUsd')}</label><input id="fx-usd" type="number" step="0.01" min="0.01">
   <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button></div>` : '';
   return `${backLink(t('backServices'), 'services')}
-  <div class="page-title">${t('fx')}</div><p class="page-sub">${t('fxIntro')}</p>
+  <div class="page-title">${t('fx')}</div>
   <div class="balance"><div class="balance-top"><span>${lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)'}</span></div>
   <div class="big">${moneyUsd(me.fxBalanceCents)}</div>
   <div class="acct-num">${me.fxAccount || ''}</div></div>
@@ -549,7 +550,7 @@ function cardTopupView(){
   if (ctCardId == null && cards.length) ctCardId = cards[0].id;
   const opts = cards.map(c => `<option value="${c.id}" ${c.id === ctCardId ? 'selected' : ''}>${esc(c.kind || 'Visa')} — ${esc(c.masked)} — ${moneyUsd(c.balanceCents)}</option>`).join('');
   return `${backLink(t('backCards'), 'cards')}
-  <div class="page-title">${t('cardTopupTitle')}</div><p class="page-sub">${t('cardTopupIntro')}</p>
+  <div class="page-title">${t('cardTopupTitle')}</div>
   <div class="card">${detailRow(lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)', moneyUsd(me.fxBalanceCents))}${detailRow(lang === 'en' ? 'FX account number' : 'رقم الحساب الأجنبي', esc(me.fxAccount || ''))}</div>
   <div class="card">
   <label>${t('topupSource')}</label><select id="ct-source"><option>${lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)'} — ${moneyUsd(me.fxBalanceCents)}</option></select>
@@ -573,7 +574,7 @@ function cardTransferView(){
   const src = cards.find(c => c.id === ccFromId) || cards[0];
   const opts = cards.map(c => `<option value="${c.id}" ${c.id === ccFromId ? 'selected' : ''}>${esc(c.kind || 'Visa')} — ${esc(c.masked)}</option>`).join('');
   return `${backLink(t('backCards'), 'cards')}
-  <div class="page-title">${t('cardTransferTitle')}</div><p class="page-sub">${t('cardTransferIntro')}</p>
+  <div class="page-title">${t('cardTransferTitle')}</div>
   <div class="card">
   <label>${t('sourceCard')}</label><select id="cc-from" onchange="ccFromId=Number(this.value);const n=document.getElementById('cc-bal');if(n)n.textContent='${lang === 'en' ? 'Source card balance: ' : 'رصيد بطاقة المصدر: '}' + (this.options[this.selectedIndex].dataset.bal || '');">${cards.map(c => `<option value="${c.id}" data-bal="${moneyUsd(c.balanceCents)}" ${c.id === ccFromId ? 'selected' : ''}>${esc(c.kind || 'Visa')} — ${esc(c.masked)}</option>`).join('')}</select>
   <label>${t('recipientCard')}</label><input id="cc-to" placeholder="0000 0000 0000 0000">
@@ -601,13 +602,12 @@ function cardsView(){
   const list = cards.map(c =>
     `<div><div class="visa" onclick="openCard(${c.id})"><div style="display:flex;justify-content:space-between;gap:8px"><span>${brandName()}</span><span>VISA ${esc(c.kind || '')}</span></div><div class="num">${esc(c.masked)}</div><div style="display:flex;justify-content:space-between;gap:8px"><span>${lang === 'en' ? 'Balance: ' : 'الرصيد: '}${moneyUsd(c.balanceCents)}</span><span>${lang === 'en' ? 'Daily limit: ' : 'الحد اليومي: '}${moneyUsd((c.dailyLimitUsd || 0) * 100)}</span></div><div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px"><span>${lang === 'en' ? 'Valid to: ' : 'صالحة حتى: '}${esc(c.exp || '')}</span><span>${lang === 'en' ? 'Tap to open card page' : 'اضغط لفتح صفحة البطاقة'} ›</span></div></div><div style="text-align:end;margin:-4px 0 14px"><span class="pill-active">${statusLabel(c.status)}</span></div></div>`).join('') || `<p class="muted">—</p>`;
   return `${backLink(t('backServices'), 'services')}
-  <div class="page-title">${t('cards')}</div><p class="page-sub">${t('cardsIntro')}</p>
-  <div class="card"><div style="font-weight:900;margin-bottom:6px">${t('fpNoticeTitle')}</div><p class="muted" style="margin:0">${fpNote}</p></div>
+  <div class="page-title">${t('cards')}</div>
   ${list}
-  <div class="card"><div style="font-weight:900">${t('newCardTitle')}</div><p class="muted">${t('newCardDesc')}</p>
+  <div class="card"><div style="font-weight:900">${t('newCardTitle')}</div>
   ${detailRow(t('issueFee'), moneySdg(100000))}${detailRow(t('validity'), lang === 'en' ? '5 years from issuance' : '5 سنوات من تاريخ الإصدار')}${detailRow(t('yourBalance'), moneySdg(me ? me.sdgBalance : 0))}${detailRow(t('activeCards'), lang === 'en' ? `${active.length} of 5 max` : `${active.length} من 5 كحد أقصى`)}
   <button class="btn" onclick="requestCard()">${t('newCard')} — 100,000 SDG</button><div id="cd-err" class="err"></div></div>
-  <p class="muted">${lang === 'en' ? 'Card balances are USD only. Cards are topped up from the FX account only — fund your FX account from your SDG account first, then top up a card, and card-to-card transfers are card-to-card only in USD.' : 'أرصدة البطاقات بالدولار فقط. البطاقة تُشحن من الحساب الأجنبي فقط — اشحن حسابك الأجنبي من حساب الجنيه أولاً ثم اشحن البطاقة، وتحويلات البطاقات تتم من بطاقة إلى بطاقة فقط بالدولار.'}</p>`;
+`;
 }
 function cardPageView(){
   const c = selCard; if (!c) return cardsView();
@@ -638,13 +638,7 @@ function cardPageView(){
 }
 function depositsView(){
   return `${backLink(t('backServices'), 'services')}
-  <div class="page-title">${t('depositsTitle')}</div><p class="page-sub">${t('depositsIntro')}</p>
-  <div class="card"><div style="font-weight:900;margin-bottom:8px">${lang === 'en' ? 'Annual profit rate tiers by deposit amount' : 'شرائح نسبة الأرباح السنوية حسب مبلغ الوديعة'}</div>
-  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'Under 1,000,000 SDG — 12% per year' : 'أقل من 1,000,000 ج.س — 12% سنوياً'}</p>
-  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'From 1,000,000 to under 10,000,000 SDG — 15% per year' : 'من 1,000,000 إلى أقل من 10,000,000 ج.س — 15% سنوياً'}</p>
-  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'From 10,000,000 to under 1,000,000,000 SDG — 20% per year' : 'من 10,000,000 إلى أقل من 1,000,000,000 ج.س — 20% سنوياً'}</p>
-  <p class="muted" style="margin:4px 0">${lang === 'en' ? 'From 1,000,000,000 SDG and above — 30% per year' : 'من 1,000,000,000 ج.س فأكثر — 30% سنوياً'}</p>
-  <p class="muted" style="margin:10px 0 0">${lang === 'en' ? 'Profit = deposit amount × annual rate × (days ÷ 365) — maturity date = deposit date + days.' : 'الربح = مبلغ الوديعة × النسبة السنوية × (عدد أيام المدة ÷ 365) — وتاريخ الاستحقاق = تاريخ الإيداع + أيام المدة.'}</p></div>
+  <div class="page-title">${t('depositsTitle')}</div>
   <div class="card">
   <label>${lang === 'en' ? 'Deposit amount (SDG)' : 'مبلغ الوديعة (ج.س)'}</label><input id="dp-amt" type="number" min="1" value="10000">
   <label>${lang === 'en' ? 'Duration' : 'المدة'}</label><select id="dp-days">
@@ -665,9 +659,8 @@ async function loadDeposits(){
 }
 function investView(){
   return `${backLink(t('backServices'), 'services')}
-  <div class="page-title">${t('invest')}</div><p class="page-sub">${lang === 'en' ? 'Demo currencies, gold and stocks at announced fake prices.' : 'عملات وذهب وأسهم تجريبية بأسعار وهمية معلنة.'}</p>
-  <div class="card"><h2>${t('invest')} — <span class="badge">تجريبي</span></h2><p class="muted">Demo only — fake announced prices, no real trading or real money. / تجريبي فقط — أسعار وهمية معلنة، لا تداول حقيقي ولا أموال حقيقية.</p>
-  <div id="inv-assets"></div><div id="inv-port"></div><div id="inv-err" class="err"></div>
+  <div class="page-title">${t('invest')}</div>
+  <div class="card"><h2>${t('invest')}</h2><div id="inv-assets"></div><div id="inv-port"></div><div id="inv-err" class="err"></div>
   <button class="btn secondary" onclick="go('services')">${t('backServices')}</button></div>`;
 }
 function receiptView(){
@@ -726,7 +719,7 @@ function adminView(){
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn secondary" style="width:auto" onclick="adminFreezeAll(${u.id})">${lang === 'en' ? 'Freeze all' : 'تجميد الكل'}</button><button class="btn secondary" style="width:auto" onclick="adminUnfreeze(${u.id})">${lang === 'en' ? 'Unfreeze' : 'فك التجميد'}</button>${u.status === 'banned' ? `<button class="btn" style="width:auto" onclick="adminUnban(${u.id})">${lang === 'en' ? 'Approve reopen' : 'الموافقة على إعادة الفتح'}</button>` : `<button class="btn-outline-danger" style="width:auto" onclick="adminBan(${u.id})">${lang === 'en' ? 'Ban' : 'حظر'}</button>`}</div>`}</div>`).join('') || `<p class="muted">${lang === 'en' ? 'No registered users yet' : 'لا يوجد مستخدمون مسجلون بعد'}</p>`;
   const txRows = (dash?.allTransactions || []).map(opRow).join('') || `<p class="muted">—</p>`;
   return `${backLink(t('backHome'), 'home')}
-  <div class="page-title">${t('admin')}</div><p class="page-sub">${lang === 'en' ? 'Demo admin account from Wassil — fund user accounts and review their operations.' : 'حساب إداري تجريبي من وصل — موّل حسابات المستخدمين وراجع عملياتهم.'}</p>
+  <div class="page-title">${t('admin')}</div><p class="page-sub">${lang === 'en' ? 'Admin account — manage user accounts.' : 'حساب إداري لإدارة حسابات المستخدمين.'}</p>
   <div class="card"><h2>${lang === 'en' ? '1 — Find an account' : '١ — ابحث عن حساب'}</h2>
   <label>${lang === 'en' ? 'Account number (4 digits) or email' : 'رقم الحساب (٤ أرقام) أو البريد الإلكتروني'}</label>
   <input id="ad-search" inputmode="numeric" placeholder="1002" value="${esc(adminSearch)}">
@@ -748,16 +741,45 @@ function adminView(){
   <div class="page-title" style="margin-top:18px">${lang === 'en' ? `3 — Accounts (${shown.length} of ${all.length})` : `٣ — الحسابات (${shown.length} من ${all.length})`}</div>${users}
   <div class="page-title" style="margin-top:18px">${lang === 'en' ? '4 — Transfer and transaction log' : '٤ — سجل التحويل والمعاملات'}</div>
   <div class="card">${txRows}</div>
-  <div class="demo-foot">${t('demoNote')}</div>`;
+  `;
 }
 function securityView(){
   return `${backLink(t('backServices'), 'services')}
-  <div class="page-title">${t('security')}</div><p class="page-sub">${lang === 'en' ? 'Fingerprint, password and trusted devices.' : 'الرمز، أسئلة الأمان، الأجهزة.'}</p>
+  <div class="page-title">${t('security')}</div>
   <div class="card"><h2>${t('security')}</h2>
   <p class="muted">${lang === 'en' ? 'Fingerprint key is bound to this account and this device only. The fingerprint image is never stored and never leaves the device.' : 'مفتاح البصمة مربوط بهذا الحساب وهذا الجهاز فقط. صورة البصمة لا تُحفظ أبداً ولا تغادر الجهاز.'}</p>
   <button class="btn" onclick="enableFp()">${t('enableFingerprint')}</button>
   <button class="btn secondary" onclick="disableFp()">${t('disableFingerprint')}</button><div id="sec-err" class="err"></div><div id="sec-ok" class="ok"></div>
   <button class="btn secondary" onclick="go('services')">${t('backServices')}</button></div>`;
+}
+function policiesView(){
+  const sec = (ttl, body) => `<div class="card"><h2 style="font-size:17px">${ttl}</h2><p class="muted">${body}</p></div>`;
+  const back = window._policyReturn || (me ? 'home' : 'login');
+  const agreed = localStorage.getItem('wassil-policy-agreed') === '1';
+  return `${backLink(lang === 'en' ? 'Back' : 'رجوع', back)}
+  <div class="page-title">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</div>
+  <p class="muted">${lang === 'en' ? 'Read this policy once and agree before creating an account. It holds everything that used to be explained on the screens.' : 'اقرأ هذه السياسة مرة واحدة ووافق عليها قبل إنشاء الحساب. فيها كل الشروحات التي كانت تظهر داخل الشاشات.'}</p>
+  ${sec(lang === 'en' ? '1 — This is a learning demo, not a real bank' : '١ — هذا نموذج تعليمي، وليس بنكاً حقيقياً',
+    lang === 'en' ? 'Wassil is a learning demo. All balances, cards, transfers, bills, deposits and investments are fake data. No real money ever moves, no real bank account is opened, and no real payment is made. The activation code is shown inside the app — no real email is sent. Passwords are stored as a salted hash, never in plain text. Do not treat any balance or receipt here as real money.' : 'وصل نموذج تعليمي. كل الأرصدة والبطاقات والتحويلات والفواتير والودائع والاستثمارات بيانات وهمية. لا تتحرك أي أموال حقيقية أبداً، ولا يُفتح حساب بنكي حقيقي، ولا يتم أي دفع حقيقي. كود التفعيل يظهر داخل التطبيق — لم يُرسل أي بريد حقيقي. كلمات المرور محفوظة مشفرة، وليست نصاً واضحاً. لا تتعامل مع أي رصيد أو إشعار هنا على أنه أموال حقيقية.')}
+  ${sec(lang === 'en' ? '2 — Accounts and transfers' : '٢ — الحسابات والتحويلات',
+    lang === 'en' ? 'Each account gets a 4-digit SDG account and a 4-digit FX account. Transfers between registered Wassil accounts need the recipient account number; the recipient name is checked before confirmation. A QR code opens a transfer to that account, and scanning it in the app fills in the recipient.' : 'لكل حساب رقم حساب بالجنيه من ٤ أرقام ورقم حساب أجنبي من ٤ أرقام. التحويل بين حسابات وصل المسجلة يحتاج رقم حساب المستلم، ويتم التأكد من اسمه قبل التأكيد. رمز QR يفتح تحويلاً لذلك الحساب، ومسحه داخل التطبيق يملأ المستلم تلقائياً.')}
+  ${sec(lang === 'en' ? '3 — Visa cards' : '٣ — بطاقات فيزا',
+    lang === 'en' ? 'A Visa card costs 100,000 SDG on issuance, is valid 5 years from issuance, and at most 5 active cards per user. The fee is non-refundable and cancellation is final; a cancelled card\'s remaining USD stays locked on the card and does not return to the account. Card balances are USD only. Cards are topped up from the FX account only, and card-to-card transfers are USD only. Cards can be frozen, unfrozen, and their daily limit and CVV changed; the eye icon shows the full card details.' : 'بطاقة فيزا سعر إصدارها ١٠٠٬٠٠٠ ج.س، وصالحة ٥ سنوات من تاريخ الإصدار، وبحد أقصى ٥ بطاقات نشطة لكل مستخدم. السعر غير مسترد والإلغاء نهائي؛ ورصيد البطاقة الملغاة بالدولار يبقى محبوساً فيها ولا يعود للحساب. أرصدة البطاقات بالدولار فقط. البطاقة تُشحن من الحساب الأجنبي فقط، وتحويلات البطاقات تتم من بطاقة إلى بطاقة بالدولار فقط. يمكن تجميد البطاقة وإلغاء تجميدها وتغيير حدها اليومي ورمز CVV، وأيقونة العين تعرض تفاصيل البطاقة كاملة.')}
+  ${sec(lang === 'en' ? '4 — FX account' : '٤ — الحساب الأجنبي',
+    lang === 'en' ? 'One USD account per user. It is funded from the SDG account only at the demo rate of 1 USD = 10,000 SDG, and FX transfers go to another user\'s FX account by its FX number with a name check. Historical conversion titles keep the rate recorded at their time.' : 'حساب دولاري واحد لكل مستخدم. يُشحن من حساب الجنيه فقط بالسعر التجريبي ١ دولار = ١٠٬٠٠٠ ج.س، وتحويلات الأجنبي تذهب لحساب أجنبي آخر برقمه مع التأكد من الاسم. عناوين التحويل القديمة تحتفظ بالسعر المسجل وقتها.')}
+  ${sec(lang === 'en' ? '5 — Deposits and investments' : '٥ — الودائع والاستثمار',
+    lang === 'en' ? 'Deposits: durations 24 hours, week, month, 3 months, 6 months, year. Annual profit rates: under 1,000,000 SDG — 12%; 1,000,000 to under 10,000,000 — 15%; 10,000,000 to under 1,000,000,000 — 20%; 1,000,000,000 and above — 30%. Profit = amount × annual rate × (days ÷ 365); maturity = deposit date + days. Investments: currencies, gold and generic stocks at announced demo prices. Prices are fixed, so profit/loss stays 0 until price movement is decided; this is not real trading.' : 'الودائع: المدد ٢٤ ساعة وأسبوع وشهر و٣ أشهر و٦ أشهر وسنة. النسب السنوية: أقل من ١٬٠٠٠٬٠٠٠ ج.س — ١٢٪؛ من ١٬٠٠٠٬٠٠٠ إلى أقل من ١٠٬٠٠٠٬٠٠٠ — ١٥٪؛ من ١٠٬٠٠٠٬٠٠٠ إلى أقل من ١٬٠٠٠٬٠٠٠٬٠٠٠ — ٢٠٪؛ من ١٬٠٠٠٬٠٠٠٬٠٠٠ فأكثر — ٣٠٪. الربح = المبلغ × النسبة السنوية × (الأيام ÷ ٣٦٥)؛ والاستحقاق = تاريخ الإيداع + الأيام. الاستثمار: عملات وذهب وأسهم عامة بأسعار تجريبية معلنة. الأسعار ثابتة، فالربح والخسارة يبقيان صفراً حتى يُقرر تحريك الأسعار؛ وهذا ليس تداولاً حقيقياً.')}
+  ${sec(lang === 'en' ? '6 — Bonuses' : '٦ — المكافآت',
+    lang === 'en' ? 'Welcome bonus: 15,000 SDG on activation of your first account per device. Invite bonus: 50,000 SDG for the new account that enters a valid invite code (WSL + the inviter\'s SDG account, e.g. WSL1002) at activation — once per account and once per device. The inviter gets nothing extra. An invalid code still activates without the invite bonus.' : 'المكافأة الترحيبية: ١٥٬٠٠٠ ج.س عند تفعيل أول حساب من كل جهاز. مكافأة الدعوة: ٥٠٬٠٠٠ ج.س للحساب الجديد الذي يكتب رمز دعوة صحيح (WSL + رقم حساب الداعي بالجنيه، مثلاً WSL1002) عند التفعيل — مرة واحدة للحساب ومرة واحدة للجهاز. الداعي لا يأخذ شيئاً إضافياً. الرمز غير الصحيح يفعّل الحساب من غير مكافأة الدعوة.')}
+  ${sec(lang === 'en' ? '7 — Admin, freeze and ban' : '٧ — الأدمن والتجميد والحظر',
+    lang === 'en' ? 'The admin account is not an ordinary user account: it cannot transfer, pay bills or hold cards. It funds user accounts in SDG and USD (unlimited), freezes a specific amount or all assets, unbans only with admin approval, bans users, and stops or restarts user cards. A banned account cannot log in; a frozen amount cannot be spent until the admin releases it. Fingerprint login is real device biometrics (WebAuthn) enrolled after password login; password login always remains as fallback.' : 'حساب الأدمن ليس حساب مستخدم عادياً: لا يحوّل ولا يدفع فواتير ولا يملك بطاقات. يموّل حسابات المستخدمين بالجنيه والدولار (من غير حد)، ويجمّد مبلغاً معيناً أو كل الأصول، ولا يُعاد فتح الحساب إلا بموافقة الأدمن، ويحظر المستخدمين، ويوقف بطاقاتهم أو يعيد تشغيلها. الحساب المحظور لا يستطيع الدخول، والمبلغ المجمّد لا يُصرف حتى يفكّه الأدمن. دخول البصمة بصمة جهاز حقيقية (WebAuthn) تُسجّل بعد دخول كلمة المرور؛ ودخول كلمة المرور يبقى دائماً كبديل.')}
+  <button class="btn" onclick="agreePolicy()">${agreed ? (lang === 'en' ? 'Already agreed — continue' : 'تمت الموافقة سابقاً — متابعة') : (lang === 'en' ? 'I agree to the site policy' : 'موافق على سياسة الموقع')}</button>
+  <p class="muted">${lang === 'en' ? 'Agreeing means you understood this is a demo with fake money, not a real bank.' : 'الموافقة تعني أنك فهمت أن هذا نموذج تجريبي بأموال وهمية، وليس بنكاً حقيقياً.'}</p>`;
+}
+function agreePolicy(){
+  localStorage.setItem('wassil-policy-agreed', '1');
+  toast(lang === 'en' ? 'Policy agreed — you can now create an account' : 'تمت الموافقة على السياسة — يمكنك الآن إنشاء حساب');
+  go(window._policyReturn || 'signup');
 }
 function simpleView(title, body, backView, subtitle){
   const bv = backView || 'home';
@@ -765,12 +787,12 @@ function simpleView(title, body, backView, subtitle){
   return `${backLink(bl, bv)}
   <div class="page-title">${esc(title)}</div>${subtitle ? `<p class="page-sub">${subtitle}</p>` : ''}
   <div class="card">${body}</div>
-  <div class="demo-foot">${t('demoNote')}</div>`;
+  `;
 }
 function render(){
   document.documentElement.lang = lang; document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
   // Admin lands only on admin views: the admin account is not an ordinary account.
-  if (me && me.role === 'admin' && !['login', 'signup', 'admin', 'account'].includes(view)) view = 'admin';
+  if (me && me.role === 'admin' && !['login', 'signup', 'admin', 'account', 'policies'].includes(view)) view = 'admin';
   if (view === 'home' && window._pendingTo && me) view = 'transfer';
   let html = '';
   if (view === 'login') html = loginView();
@@ -792,11 +814,12 @@ function render(){
   else if (view === 'loan') html = loanView();
   else if (view === 'cardTopup') html = cardTopupView();
   else if (view === 'cardTransfer') html = cardTransferView();
-  else if (view === 'bills') html = simpleView(t('bills'), `<div id="bills-list"></div>`, 'home', lang === 'en' ? 'Pay your demo bills from your balance.' : 'ادفع فواتيرك التجريبية من رصيدك.');
-  else if (view === 'goals') html = simpleView(t('goals'), `<label>Name / الاسم</label><input id="goal-name"><label>Target (SDG)</label><input id="goal-tgt" type="number"><button class="btn" onclick="addGoal()">${t('send')}</button><div id="goals-list"></div>`, 'services', lang === 'en' ? 'Save towards a goal with a set amount and term.' : 'ادخر نحو هدفك خطوة بخطوة.');
-  else if (view === 'orders') html = simpleView(t('orders'), `<label>${t('toAccount')}</label><input id="ord-to"><label>${t('amount')} (SDG)</label><input id="ord-amt" type="number"><button class="btn" onclick="addOrder()">${t('send')}</button><div id="orders-list"></div>`, 'services', lang === 'en' ? 'Saved recurring demo transfers.' : 'تحويلات متكررة مجدولة وهمياً.');
-  else if (view === 'branches') html = simpleView(t('branches'), `<div id="branches-list"></div>`, 'home', lang === 'en' ? 'Demo branch list.' : 'قائمة وهمية قابلة للبحث.');
-  else if (view === 'faq') html = simpleView(t('faq'), `<p>Demo only — this is not real bank support. / تجريبي فقط — ليس دعماً بنكياً حقيقياً.</p><p>Q: Is this real money? / هل هذه أموال حقيقية؟<br>A: No — all balances and prices are fake demo data. / لا — كل الأرصدة والأسعار بيانات تجريبية وهمية.</p>`, 'home', lang === 'en' ? 'FAQ about the demo model.' : 'أسئلة شائعة عن النموذج التجريبي.');
+  else if (view === 'bills') html = simpleView(t('bills'), `<div id="bills-list"></div>`, 'home', '');
+  else if (view === 'goals') html = simpleView(t('goals'), `<label>Name / الاسم</label><input id="goal-name"><label>Target (SDG)</label><input id="goal-tgt" type="number"><button class="btn" onclick="addGoal()">${t('send')}</button><div id="goals-list"></div>`, 'services', '');
+  else if (view === 'orders') html = simpleView(t('orders'), `<label>${t('toAccount')}</label><input id="ord-to"><label>${t('amount')} (SDG)</label><input id="ord-amt" type="number"><button class="btn" onclick="addOrder()">${t('send')}</button><div id="orders-list"></div>`, 'services', '');
+  else if (view === 'branches') html = simpleView(t('branches'), `<div id="branches-list"></div>`, 'home', '');
+  else if (view === 'faq') html = simpleView(t('faq'), `<button class="btn" onclick="window._policyReturn='faq';go('policies')">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</button>`, 'home', '');
+  else if (view === 'policies') html = policiesView();
   else html = homeView();
   const logged = !!me && view !== 'login' && view !== 'signup';
   if (logged) html = userbar() + html;
@@ -830,8 +853,8 @@ async function doLogin(){
   catch(e){ $('#li-err').textContent = e.message; }
 }
 async function doSignup(){
-  try { const j = await api('/api/register', { method:'POST', body: JSON.stringify({ email: $('#su-email').value, fullNameAr: $('#su-ar').value, fullNameEn: $('#su-en').value, password: $('#su-pass').value, inviteCode: $('#su-invite') ? $('#su-invite').value : '' }) });
-    $('#su-ok').textContent = 'Activation code (demo, no real email sent): ' + j.activationCode + ' / كود التفعيل التجريبي: ' + j.activationCode;
+  try { const j = await api('/api/register', { method:'POST', body: JSON.stringify({ email: $('#su-email').value, fullNameAr: $('#su-ar').value, fullNameEn: $('#su-en').value, password: $('#su-pass').value, inviteCode: $('#su-invite') ? $('#su-invite').value : '', policyAgreed: localStorage.getItem('wassil-policy-agreed') === '1' }) });
+    $('#su-ok').textContent = 'Activation code (shown in-app, no real email sent): ' + j.activationCode + ' / كود التفعيل (يظهر داخل التطبيق، لم يُرسل بريد حقيقي): ' + j.activationCode;
     $('#su-activate').classList.remove('hidden'); window._actEmail = j.email; window._actCode = j.activationCode; }
   catch(e){ $('#su-err').textContent = e.message; }
 }
