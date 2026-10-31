@@ -294,11 +294,25 @@ const ADMIN_WHATSAPP_DISPLAY = '00819043493101';
 function contactAdminLink(){ return `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(lang === 'en' ? 'Hello, I need help with Wassil.' : 'مرحباً، أحتاج مساعدة في تطبيق وصل.')}`; }
 function contactAdminRow(){ return `<a class="menu-row" style="text-decoration:none;color:inherit" href="${contactAdminLink()}" target="_blank" rel="noopener"><span class="acct-ic">${IC.whatsapp}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${lang === 'en' ? 'Contact management' : 'تواصل مع الإدارة'}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">WhatsApp ${ADMIN_WHATSAPP_DISPLAY}</span></span><span>›</span></a>`; }
 const WAVE = '<svg viewBox="0 0 64 64" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 30c6-7 12-7 18 0s12 7 18 0" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity=".85"/><path d="M10 44c6-7 12-7 18 0s12 7 18 0" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/><circle cx="48" cy="14" r="5" fill="#ffffff"/></svg>';
+const NOTIF_TYPES = ['transfer_in', 'fx_transfer_in', 'card_transfer_in', 'welcome_bonus', 'invite_bonus', 'invite_reward'];
+function notifItems(txs){ return (txs || []).filter(t => NOTIF_TYPES.includes(t.type)); }
+function notifSeenId(){ try { const v = localStorage.getItem('wassil-notif-seen'); return v === null ? null : Number(v); } catch { return null; } }
+function notificationsView(){
+  loadStmtTxs();
+  const items = notifItems(stmtBaseTxs());
+  const maxId = items.reduce((m, t) => Math.max(m, t.id || 0), 0);
+  if (maxId) { try { localStorage.setItem('wassil-notif-seen', String(maxId)); } catch {} }
+  const rows = items.map(opRow).join('') || `<p class="muted">${lang === 'en' ? 'No notifications yet' : 'لا توجد إشعارات بعد'}</p>`;
+  return `${backLink(t('backHome'), 'home')}
+  <div class="page-title">${t('notifications')}</div><p class="page-sub">${lang === 'en' ? 'Your incoming money and bonuses — tap any notification to open its receipt.' : 'واردك والمكافآت — اضغط على أي إشعار لفتح إيصاله.'}</p>
+  <div class="card">${rows}</div>`;
+}
 function userbar(){
-  const n = (dash?.transactions || []).length;
+  const seen = notifSeenId();
+  const n = seen === null ? 0 : (dash?.transactions || []).filter(t => NOTIF_TYPES.includes(t.type) && (t.id || 0) > seen).length;
   const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
   return `<div class="userbar"><div class="userbar-main"><div class="avatar">${esc(letter)}</div><div style="min-width:0"><div class="welcome">${t('welcome')}</div><div class="user-name">${esc(nameOf(me))}</div></div></div>
-  <div class="userbar-actions"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><button type="button" class="icon-pill" aria-label="${t('notifications')}" onclick="go('statement')">${IC.bell}${n ? `<span class="bell-dot">${n > 99 ? '99+' : n}</span>` : ''}</button><button type="button" class="icon-pill" aria-label="${t('logout')}" onclick="doLogout()">${IC.logout}</button></div></div>`;
+  <div class="userbar-actions"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><button type="button" class="icon-pill" aria-label="${t('notifications')}" onclick="go('notifications')">${IC.bell}${n ? `<span class="bell-dot">${n > 99 ? '99+' : n}</span>` : ''}</button><button type="button" class="icon-pill" aria-label="${t('logout')}" onclick="doLogout()">${IC.logout}</button></div></div>`;
 }
 function opRow(tx){
   const neg = (tx.currency === 'USD' ? (tx.amountUsdCents || 0) : (tx.amountSdg || 0)) < 0;
@@ -418,7 +432,8 @@ function accountView(){
   <p class="muted">${lang === 'en' ? 'Share it: any new account that enters this code at activation gets a 50,000 SDG invite bonus — and you get 50,000 SDG too for each person who activates with it.' : 'شاركه: أي حساب جديد يكتب هذا الرمز عند التفعيل بياخد مكافأة دعوة 50,000 ج.س — وأنت بتاخد 50,000 ج.س عن كل شخص يفعّل برمزك.'}</p>
   <button class="btn secondary" onclick="copyInvite()">${lang === 'en' ? 'Copy invite code' : 'نسخ رمز الدعوة'}</button></div>
   <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${t('beneficiaries')}</span></span></div>${ben}</div>
-  <div class="profile-card"><button type="button" class="menu-row" onclick="go('statement')"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('notifications')}</span><span class="menu-row-sub">${lang === 'en' ? 'Your operations and updates' : 'عملياتك وتحديثاتك'}</span></span><span>›</span></button>
+  <div class="profile-card"><button type="button" class="menu-row" onclick="go('notifications')"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('notifications')}</span><span class="menu-row-sub">${lang === 'en' ? 'Incoming money and bonuses' : 'واردك والمكافآت'}</span></span><span>›</span></button>
+  <button type="button" class="menu-row" onclick="go('statement')"><span class="acct-ic">${IC.chart}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('statement')}</span><span class="menu-row-sub">${lang === 'en' ? 'Your full history' : 'سجل عملياتك الكامل'}</span></span><span>›</span></button>
   <button type="button" class="menu-row" onclick="go('security')"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('security')}</span><span class="menu-row-sub">${lang === 'en' ? 'Fingerprint and password' : 'البصمة وكلمة المرور'}</span></span><span>›</span></button>
   <button type="button" class="menu-row" onclick="window._policyReturn='account';go('policies')"><span class="acct-ic">${IC.info}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</span></span><span>›</span></button>
   ${contactAdminRow()}</div>
@@ -446,7 +461,7 @@ function applyStmtFilter(){
   document.querySelectorAll('.flt-btn[data-range]').forEach(b => b.classList.toggle('on', b.dataset.range === stmtRange));
   const l5 = document.getElementById('stmtLast5Btn'); if (l5) l5.classList.toggle('on', stmtLast5);
 }
-function loadStmtTxs(){ if (stmtTxs || stmtTxsLoading) return; stmtTxsLoading = true; api('/api/transactions').then(d => { stmtTxs = d.transactions || []; stmtTxsLoading = false; if (view === 'statement') render(); }).catch(() => { stmtTxsLoading = false; }); }
+function loadStmtTxs(){ if (stmtTxs || stmtTxsLoading) return; stmtTxsLoading = true; api('/api/transactions').then(d => { stmtTxs = d.transactions || []; stmtTxsLoading = false; if (view === 'statement' || view === 'notifications') render(); }).catch(() => { stmtTxsLoading = false; }); }
 function statementView(){
   loadStmtTxs();
   const txs = stmtBaseTxs();
@@ -722,11 +737,14 @@ async function doCardTransfer(){
   const to = $('#cc-to') ? $('#cc-to').value : ''; const amt = $('#cc-amt') ? $('#cc-amt').value : '';
   if (!from || !to || !amt) { const el = $('#cc-err'); if (el) el.textContent = lang === 'en' ? 'Fill in card, recipient and amount' : 'أكمل البطاقة والمستلم والمبلغ'; return; }
   // Review step; the optional note is shown on the form only — the card-transfer API takes no note field, so it is not sent or stored.
-  if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD']] }))) return;
+  await loadDash();
+  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine] }))) return;
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
-  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt, pin }) }); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j.ref); await loadDash(); openCard(from); }
-  catch(e){ const el = $('#cc-err'); if (el) el.textContent = friendlyErr(e.message); }
+  const runCard = async (p) => api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt, pin: p }) });
+  try { const j = await runCard(pin); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j.ref); await loadDash(); openCard(from); }
+  catch(e){ if (e.message === 'pin_required') { const p2 = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runCard(p2); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j2.ref); await loadDash(); openCard(from); } catch(e2){ const el2 = $('#cc-err'); if (el2) el2.textContent = friendlyErr(e2.message); } } else { const el = $('#cc-err'); if (el) el.textContent = friendlyErr(e.message); } }
 }
 function cardsView(){
   const cards = dash?.cards || [];
@@ -989,6 +1007,7 @@ function render(){
   else if (view === 'services') html = servicesView();
   else if (view === 'account') html = accountView();
   else if (view === 'statement') html = statementView();
+  else if (view === 'notifications') html = notificationsView();
   else if (view === 'qr') html = qrView();
   else if (view === 'scan') html = scanView();
   else if (view === 'loan') html = loanView();
@@ -1073,11 +1092,15 @@ async function doTransfer(){
   // The optional note is shown on the form only; the transfer API takes no note field, so it is not sent or stored.
   const to = $('#tr-to') ? $('#tr-to').value : ''; const amt = $('#tr-amt') ? $('#tr-amt').value : '';
   const name = $('#tr-name') ? $('#tr-name').textContent : '';
-  if (!(await confirmSheet({ title: lang === 'en' ? 'Review transfer' : 'مراجعة التحويل', lines: [[lang === 'en' ? 'To' : 'إلى', name || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' SDG'], [lang === 'en' ? 'Fee' : 'الرسوم', '300 SDG'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 300) + ' SDG']], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
+  await loadDash();
+  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review transfer' : 'مراجعة التحويل', lines: [[lang === 'en' ? 'To' : 'إلى', name || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' SDG'], [lang === 'en' ? 'Fee' : 'الرسوم', '300 SDG'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 300) + ' SDG'], pinLine], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
-  try { await loadDash(); const j = await api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt, pin }) });
-    toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); } catch(e){ $('#tr-err').textContent = friendlyErr(e.message); }
+  const runTransfer = async (p) => api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt, pin: p }) });
+  try { const j = await runTransfer(pin);
+    toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); }
+  catch(e){ if (e.message === 'pin_required') { const p2 = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runTransfer(p2); toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j2.ref); await loadDash(); await maybeSuggestBeneficiary(j2); go('home'); } catch(e2){ $('#tr-err').textContent = friendlyErr(e2.message); } } else $('#tr-err').textContent = friendlyErr(e.message); }
 }
 async function doFxFund(){
   try { const j = await api('/api/fx/fund', { method:'POST', body: JSON.stringify({ amountSdg: $('#fx-amt').value }) });
@@ -1092,11 +1115,15 @@ async function doFxSell(){
 }
 async function doFxTransfer(){
   const to = $('#fx-to').value, amt = $('#fx-usd').value;
-  if (!(await confirmSheet({ title: lang === 'en' ? 'Review FX transfer' : 'مراجعة التحويل الأجنبي', lines: [[lang === 'en' ? 'To FX account' : 'إلى الحساب الأجنبي', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD']], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
+  await loadDash();
+  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review FX transfer' : 'مراجعة التحويل الأجنبي', lines: [[lang === 'en' ? 'To FX account' : 'إلى الحساب الأجنبي', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
-  try { const j = await api('/api/fx/transfer', { method:'POST', body: JSON.stringify({ toFxAccount: to, amountUsd: amt, pin }) });
-    toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); } catch(e){ $('#fx-err').textContent = friendlyErr(e.message); }
+  const runFx = async (p) => api('/api/fx/transfer', { method:'POST', body: JSON.stringify({ toFxAccount: to, amountUsd: amt, pin: p }) });
+  try { const j = await runFx(pin);
+    toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); }
+  catch(e){ if (e.message === 'pin_required') { const p2 = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runFx(p2); toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j2.ref); await loadDash(); await maybeSuggestBeneficiary(j2); go('home'); } catch(e2){ $('#fx-err').textContent = friendlyErr(e2.message); } } else $('#fx-err').textContent = friendlyErr(e.message); }
 }
 async function requestCard(){
   try { const j = await api('/api/cards/request', { method:'POST', body: '{}' }); toast(lang === 'en' ? 'Card requested successfully' : 'تم طلب البطاقة بنجاح'); await loadDash(); go('cards'); }
@@ -1136,11 +1163,7 @@ async function topupCard(){
   if (!amt) return;
   try { const j = await api('/api/cards/' + selCard.id + '/topup', { method:'POST', body: JSON.stringify({ amountUsd: amt }) }); toast('OK'); await loadDash(); openCard(selCard.id); } catch(e){ toast(e.message + ' — Cards can only be topped up from the FX account / البطاقة لا تُشحن إلا من الحساب الأجنبي'); }
 }
-async function cardTransfer(){
-  const to = prompt('Recipient card number (full) / رقم بطاقة المستلم كاملاً'); const amt = prompt('Amount in USD / المبلغ بالدولار');
-  if (!to || !amt) return;
-  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: selCard.id, toCardNumber: to, amountUsd: amt }) }); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j.ref); await loadDash(); openCard(selCard.id); } catch(e){ toast(e.message, 'err'); }
-}
+
 async function changeLimit(){
   const lim = prompt('New daily limit in USD / الحد اليومي الجديد بالدولار');
   if (!lim) return;
