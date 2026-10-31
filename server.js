@@ -173,14 +173,28 @@ async function handle(req, res) {
       const u = d.users.find((x) => x.email === body.email);
       if (!u || u.activationCode !== String(body.code)) return sendJson(res, 400, { ok: false, error: 'bad_code' });
       if (u.status === 'banned') return sendJson(res, 403, { ok: false, error: 'banned' });
+      let bonusGranted = false;
       if (u.status !== 'active') {
         u.status = 'active';
         u.sdgAccount = dbmod.accountNumber(u.id, 1000);
         u.fxAccount = dbmod.accountNumber(u.id, 2000);
         addTx({ userId: u.id, type: 'account_open', titleAr: 'فتح الحساب وتفعيله — مرحباً بك في وصّل', titleEn: 'Account opened and activated — welcome to Wassil', amountSdg: 0, currency: 'SDG', fromName: u.fullNameAr, fromAccount: u.sdgAccount, toName: u.fullNameAr, toAccount: u.sdgAccount });
+        // Welcome bonus: 15,000 SDG for a new account, but only once per device.
+        // The device is the browser's stored device id (see frontend getDeviceId);
+        // clearing browser storage or using another browser counts as another device in this demo.
+        const devId = String(body.deviceId || '').trim();
+        if (devId) {
+          if (!d.usedBonusDevices) d.usedBonusDevices = [];
+          if (!d.usedBonusDevices.includes(devId)) {
+            d.usedBonusDevices.push(devId);
+            u.sdgBalance += 15000;
+            bonusGranted = true;
+            addTx({ userId: u.id, type: 'welcome_bonus', titleAr: 'مكافأة ترحيبية — 15,000 ج.س', titleEn: 'Welcome bonus — 15,000 SDG', amountSdg: 15000, currency: 'SDG', fromName: 'وصل', fromAccount: 'Wassil', toName: u.fullNameAr, toAccount: u.sdgAccount });
+          }
+        }
         save();
       }
-      return sendJson(res, 200, { ok: true, user: publicUser(u) });
+      return sendJson(res, 200, { ok: true, user: publicUser(u), bonusGranted, bonusSdg: bonusGranted ? 15000 : 0 });
     }
     if (p === '/api/login' && method === 'POST') {
       const ident = String(body.email || body.identifier || '').trim();

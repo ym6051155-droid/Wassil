@@ -125,10 +125,41 @@ let selCard = null, selTx = null, dash = null;
 let transferTab = 'users', fxAction = 'fund', ctCardId = null, ccFromId = null;
 function backLink(label, v){ return `<button type="button" class="back-link" onclick="go('${v}')">${esc(label)} ›</button>`; }
 function detailRow(label, value){ return `<div class="detail-row"><span class="detail-label">${esc(label)}</span><b class="detail-value">${value}</b></div>`; }
-function qrCells(seed){
-  let cells = '';
-  for (let i = 0; i < 441; i++) { const ch = (seed || '').charCodeAt(i % Math.max(1, (seed || '').length)) || 0; const on = ((ch * (i + 7)) % 3) !== 0; cells += `<span class="qr-cell ${on ? 'on' : ''}"></span>`; }
-  return cells;
+function qrPayloadForAccount(acct){ return window.location.origin + '/?to=' + encodeURIComponent(acct || ''); }
+function renderRealQrs(){
+  document.querySelectorAll('[data-qr]').forEach(el => {
+    if (el.dataset.qrDone) return; el.dataset.qrDone = '1';
+    const text = el.dataset.qr || ''; const size = parseInt(el.dataset.qrSize || '220', 10);
+    try {
+      if (window.QRCode) { new QRCode(el, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M }); }
+      else { const img = document.createElement('img'); img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&margin=8&qzone=1&data=' + encodeURIComponent(text); img.alt = 'QR'; img.style.width = size + 'px'; img.style.height = size + 'px'; el.appendChild(img); }
+    } catch (e) { el.textContent = lang === 'en' ? 'QR unavailable' : 'الرمز غير متاح'; }
+  });
+}
+let scanStream = null, scanRaf = null;
+function stopScan(){ if (scanRaf) cancelAnimationFrame(scanRaf); scanRaf = null; if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; } }
+async function startScan(){
+  const st = $('#scan-status'); if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { if (st) st.textContent = lang === 'en' ? 'Camera is not available on this device/browser.' : 'الكاميرا غير متاحة على هذا الجهاز/المتصفح.'; return; }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const v = $('#scan-video'); if (!v) return; v.srcObject = scanStream; await v.play();
+    const loop = () => {
+      if (!scanStream) return;
+      if (v.readyState === v.HAVE_ENOUGH_DATA) {
+        const cv = $('#scan-canvas'); if (cv) { cv.width = v.videoWidth; cv.height = v.videoHeight; const ctx = cv.getContext('2d'); ctx.drawImage(v, 0, 0); if (window.jsQR) { const code = jsQR(ctx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height); if (code && code.data) { stopScan(); onQrScanned(code.data); return; } } }
+      }
+      scanRaf = requestAnimationFrame(loop);
+    };
+    loop();
+  } catch (e) { if (st) st.textContent = lang === 'en' ? 'Camera permission was denied or unavailable.' : 'تم رفض إذن الكاميرا أو هي غير متاحة.'; }
+}
+function onQrScanned(data){
+  const s = String(data || '').trim();
+  let to = '';
+  try { const u = new URL(s); to = u.searchParams.get('to') || ''; } catch {}
+  if (!to && /^\d{4}$/.test(s)) to = s;
+  if (to) { window._pendingTo = to; toast(lang === 'en' ? 'QR scanned — opening transfer' : 'تم مسح الرمز — فتح التحويل'); go(me ? 'transfer' : 'login'); return; }
+  toast(lang === 'en' ? 'This QR is not a Wassil transfer code.' : 'هذا الرمز ليس رمز تحويل وصل.');
 }
 function durationLabel(days){
   const d = Number(days);
@@ -138,6 +169,7 @@ function durationLabel(days){
 }
 function statusLabel(s){ if (s === 'active') return lang === 'en' ? 'Active' : 'نشطة'; if (s === 'frozen') return lang === 'en' ? 'Frozen' : 'مجمّدة'; return esc(s || ''); }
 const $ = (s) => document.querySelector(s);
+function getDeviceId(){ let id = localStorage.getItem('wassil-device-id'); if (!id) { id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)); localStorage.setItem('wassil-device-id', id); } return id; }
 const app = () => document.getElementById('app');
 function t(k){ const v = I18N[k]; return v ? (lang === 'en' ? v.en : v.ar) : k; }
 function nameOf(u){ return lang === 'en' && u && u.fullNameEn ? u.fullNameEn : (u ? u.fullNameAr : ''); }
@@ -158,7 +190,7 @@ function txAmount(tx){
   if (tx.currency === 'USD' && tx.amountUsdCents != null) return (tx.amountUsdCents >= 0 ? '+' : '') + moneyUsd(tx.amountUsdCents);
   return (tx.amountSdg >= 0 ? '+' : '') + moneySdg(tx.amountSdg);
 }
-function go(v){ view = v; render(); }
+function go(v){ if (view === 'scan' && v !== 'scan') stopScan(); view = v; render(); }
 async function loadDash(){ try { dash = await api('/api/dashboard'); me = dash.user; } catch { me = null; } }
 let showBal = true;
 function toggleBal(){ showBal = !showBal; render(); }
@@ -229,6 +261,7 @@ function signupView(){
   <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
   <div class="auth-card">${backLink(t('login'), 'login')}<h2>${t('signup')}</h2>
   <p class="muted">كود التفعيل تجريبي يظهر داخل التطبيق — لم يُرسل أي بريد حقيقي. / Demo activation code is shown in-app — no real email is sent.</p>
+  <p class="muted">${lang === 'en' ? 'Welcome bonus: 15,000 SDG on your first account per device.' : 'مكافأة ترحيبية: 15,000 ج.س على أول حساب من كل جهاز.'}</p>
   <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="su-email" type="email"></div>
   <label>${t('nameAr')}</label><input id="su-ar">
   <label>${t('nameEn')}</label><input id="su-en">
@@ -409,18 +442,25 @@ async function downloadStatementPdf(){
 }
 function qrView(){
   if (!me) return `${backLink(t('login'), 'login')}
-  <div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-grid">${qrCells('wassil-demo')}</div>
+  <div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-real" data-qr="${esc(window.location.origin + '/')}" data-qr-size="220"></div>
   <div style="font-weight:900;font-size:17px">${brandName()}</div>
-  <p class="muted">${t('qrNote')}</p>
+  <p class="muted">${lang === 'en' ? 'A real QR code: scanning it with any phone camera opens Wassil.' : 'رمز حقيقي: مسحه بأي كاميرا تلفون بيفتح وصل.'}</p>
   <p class="muted">${t('demoNote')}</p>
   <button class="btn secondary" onclick="go('login')">${t('login')}</button></div>`;
-  const cells = qrCells((me.sdgAccount || '') + nameOf(me));
   return `${backLink(t('backHome'), 'home')}
-  <div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-grid">${cells}</div>
+  <div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-real" data-qr="${esc(qrPayloadForAccount(me.sdgAccount))}" data-qr-size="220"></div>
   <div style="font-weight:900;font-size:17px">${esc(nameOf(me))}</div>
   <div class="muted" style="direction:ltr">${esc(me.sdgAccount || '')}</div>
-  <p class="muted">${t('qrNote')}</p>
-  <button class="btn secondary" onclick="copyAccount()">${lang === 'en' ? 'Copy account number' : 'نسخ رقم الحساب'}</button></div>`;
+  <p class="muted">${lang === 'en' ? 'A real QR code: scanning it with any phone camera opens a transfer straight to this account.' : 'رمز حقيقي: مسحه بأي كاميرا تلفون بيفتح تحويل مباشرة لهذا الحساب.'}</p>
+  <button class="btn secondary" onclick="copyAccount()">${lang === 'en' ? 'Copy account number' : 'نسخ رقم الحساب'}</button>
+  <button class="btn" onclick="go('scan')" style="margin-top:10px">${lang === 'en' ? 'Scan a QR code' : 'مسح رمز'}</button></div>`;
+}
+function scanView(){
+  return `${backLink(t('backHome'), 'home')}
+  <div class="page-title">${lang === 'en' ? 'Scan QR code' : 'مسح رمز QR'}</div><p class="page-sub">${lang === 'en' ? 'Point the camera at a Wassil QR code to open a transfer to that account.' : 'وجّه الكاميرا لرمز وصل عشان يفتح تحويل للحساب ده.'}</p>
+  <div class="card" style="text-align:center"><video id="scan-video" playsinline muted style="width:100%;max-width:420px;border-radius:16px;background:#000"></video><canvas id="scan-canvas" style="display:none"></canvas>
+  <p class="muted" id="scan-status">${lang === 'en' ? 'Starting camera…' : 'جاري تشغيل الكاميرا…'}</p>
+  <button class="btn secondary" onclick="stopScan(); go('home');">${lang === 'en' ? 'Stop camera' : 'إيقاف الكاميرا'}</button></div>`;
 }
 async function copyAccount(){
   try { await navigator.clipboard.writeText(me.sdgAccount || ''); } catch { const ta = document.createElement('textarea'); ta.value = me.sdgAccount || ''; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
@@ -645,7 +685,7 @@ function receiptView(){
     ${detailRow(lang === 'en' ? 'Date and time' : 'التاريخ والوقت', esc(dt))}
     ${detailRow(lang === 'en' ? 'Reference number' : 'الرقم المرجعي', esc(tx.ref || ''))}
     ${detailRow(lang === 'en' ? 'Operation status' : 'حالة العملية', lang === 'en' ? 'Completed' : 'مكتملة')}
-    <div class="qr-block"><div class="qr-grid qr-small">${qrCells(tx.ref || String(tx.id))}</div>
+    <div class="qr-block"><div class="qr-real" data-qr="${esc(window.location.origin + '/?ref=' + encodeURIComponent(tx.ref || String(tx.id)))}" data-qr-size="180"></div>
     <p class="muted" style="text-align:center;margin:8px 0 0">${t('demoReceiptNote')}</p></div>
   </div>
   <button class="btn" onclick="downloadReceipt()">↓ ${t('downloadReceipt')}</button>
@@ -721,6 +761,7 @@ function render(){
   document.documentElement.lang = lang; document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
   // Admin lands only on admin views: the admin account is not an ordinary account.
   if (me && me.role === 'admin' && !['login', 'signup', 'admin', 'account'].includes(view)) view = 'admin';
+  if (view === 'home' && window._pendingTo && me) view = 'transfer';
   let html = '';
   if (view === 'login') html = loginView();
   else if (view === 'signup') html = signupView();
@@ -737,6 +778,7 @@ function render(){
   else if (view === 'account') html = accountView();
   else if (view === 'statement') html = statementView();
   else if (view === 'qr') html = qrView();
+  else if (view === 'scan') html = scanView();
   else if (view === 'loan') html = loanView();
   else if (view === 'cardTopup') html = cardTopupView();
   else if (view === 'cardTransfer') html = cardTransferView();
@@ -760,6 +802,9 @@ function render(){
     const navLabels = { home: lang === 'en' ? 'Home' : 'الرئيسية', transfer: lang === 'en' ? 'Transfer' : 'تحويل', bills: lang === 'en' ? 'Bills' : 'فواتير', services: lang === 'en' ? 'Services' : 'الخدمات', account: lang === 'en' ? 'My account' : 'حسابي' };
     document.querySelectorAll('[data-nav]').forEach(b => { const sp = b.querySelector('span'); if (sp && navLabels[b.dataset.nav]) sp.textContent = navLabels[b.dataset.nav]; });
   }
+  renderRealQrs();
+  if (view === 'scan') startScan();
+  if (view === 'transfer' && window._pendingTo) { const p = window._pendingTo; window._pendingTo = ''; const inp = $('#tr-to'); if (inp) { inp.value = p; lookupAcc(); } }
   if (view === 'invest') loadInvest();
   if (view === 'deposits') loadDeposits();
   if (view === 'bills') loadBills();
@@ -781,8 +826,8 @@ async function doSignup(){
   catch(e){ $('#su-err').textContent = e.message; }
 }
 async function doActivate(){
-  try { const j = await api('/api/activate', { method:'POST', body: JSON.stringify({ email: window._actEmail, code: $('#su-code').value }) });
-    $('#su-ok').textContent = 'Activated! Account: ' + j.user.sdgAccount + ' / تم التفعيل! رقم الحساب: ' + j.user.sdgAccount; go('login'); }
+  try { const j = await api('/api/activate', { method:'POST', body: JSON.stringify({ email: window._actEmail, code: $('#su-code').value, deviceId: getDeviceId() }) });
+    $('#su-ok').textContent = 'Activated! Account: ' + j.user.sdgAccount + ' / تم التفعيل! رقم الحساب: ' + j.user.sdgAccount + (j.bonusGranted ? ' — Welcome bonus: 15,000 SDG / مكافأة ترحيبية: 15,000 ج.س' : ''); go('login'); }
   catch(e){ $('#su-err').textContent = e.message; }
 }
 function doLogout(){ token=''; localStorage.removeItem('wassil-token'); me=null; go('login'); }
@@ -967,5 +1012,6 @@ function downloadReceipt(){
 (async () => {
   const splash = document.getElementById('splash');
   if (splash && lang === 'en') { const sn = splash.querySelector('.splash-name'); if (sn) sn.textContent = 'Wassil'; const st = splash.querySelector('.splash-tag'); if (st) st.textContent = 'Your money arrives... easily'; }
+  try { const to = new URLSearchParams(window.location.search).get('to'); if (to) window._pendingTo = to; } catch {}
   setTimeout(async () => { if (splash) splash.classList.add('hidden'); if (token) { await loadDash(); if (me) view = 'home'; } render(); }, 1200);
 })();
