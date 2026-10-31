@@ -691,19 +691,54 @@ async function handle(req, res) {
       return sendJson(res, 200, { ok: true, deposit: dep, user: publicUser(me) });
     }
 
+    // ---- investment price movement: one GLOBAL live price per asset, ----
+    // ---- same for every user. Lazy hourly tick (the free host sleeps, so
+    // ---- no background cron is reliable): on each investments request the
+    // ---- price advances one random step (max +/-2%) per whole hour elapsed
+    // ---- since the last tick, capped at 24 steps, and clamped to 50%-200%
+    // ---- of the base price. First tick only initialises (no jump), so
+    // ---- existing holdings keep their base prices until movement starts.
+    // ---- Portfolio profit/loss follows automatically because it is valued
+    // ---- at the live price; buy/sell execute at the live price, so a sale
+    // ---- realises the gain or loss in cash.
+    const PRICE_TICK_MS = 60 * 60 * 1000, PRICE_MAX_STEP = 0.02, PRICE_MAX_STEPS = 24;
+    function liveAssets(){
+      const d = db();
+      if (!d.investPrices) { d.investPrices = {}; ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); }
+      if (!d.priceLastTick) d.priceLastTick = Date.now();
+      return ASSETS.map(a => ({ ...a, basePriceSdg: a.priceSdg, priceSdg: d.investPrices[a.id] }));
+    }
+    function tickPrices(){
+      const d = db();
+      if (!d.investPrices) { d.investPrices = {}; ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); }
+      if (!d.priceLastTick) { d.priceLastTick = Date.now(); save(); return; }
+      const steps = Math.min(Math.floor((Date.now() - d.priceLastTick) / PRICE_TICK_MS), PRICE_MAX_STEPS);
+      if (steps <= 0) return;
+      for (let k = 0; k < steps; k++) {
+        ASSETS.forEach(a => {
+          const lo = Math.round(a.priceSdg * 0.5), hi = Math.round(a.priceSdg * 2);
+          const next = Math.round(d.investPrices[a.id] * (1 + (Math.random() * 2 - 1) * PRICE_MAX_STEP));
+          d.investPrices[a.id] = Math.min(hi, Math.max(lo, next));
+        });
+      }
+      d.priceLastTick += steps * PRICE_TICK_MS;
+      save();
+    }
     // ---- investments ----
-    if (p === '/api/investments/assets' && method === 'GET') return sendJson(res, 200, { ok: true, assets: ASSETS });
+    if (p === '/api/investments/assets' && method === 'GET') { tickPrices(); return sendJson(res, 200, { ok: true, assets: liveAssets() }); }
     if (p === '/api/investments/portfolio' && method === 'GET') {
+      tickPrices();
       const holdings = db().investments.filter((h) => h.userId === me.id).map((h) => {
-        const a = ASSETS.find((x) => x.id === h.assetId);
+        const a = liveAssets().find((x) => x.id === h.assetId);
         const value = Math.round(h.quantity * a.priceSdg);
         return { ...h, asset: a, currentPriceSdg: a.priceSdg, valueSdg: value, profitSdg: value - Math.round(h.quantity * h.avgPriceSdg) };
       });
       return sendJson(res, 200, { ok: true, holdings, log: db().investmentLog.filter((l) => l.userId === me.id).slice(-50).reverse() });
     }
     if ((p === '/api/investments/buy' || p === '/api/investments/sell') && method === 'POST') {
+      tickPrices();
       const isBuy = p.endsWith('/buy');
-      const asset = ASSETS.find((a) => a.id === body.assetId);
+      const asset = liveAssets().find((a) => a.id === body.assetId);
       const qty = Number(body.quantity);
       if (!asset || !(qty > 0)) return sendJson(res, 400, { ok: false, error: 'bad_asset' });
       const total = Math.round(qty * asset.priceSdg);
