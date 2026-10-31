@@ -1062,5 +1062,16 @@ function downloadReceipt(){
   const splash = document.getElementById('splash');
   if (splash && lang === 'en') { const sn = splash.querySelector('.splash-name'); if (sn) sn.textContent = 'Wassil'; const st = splash.querySelector('.splash-tag'); if (st) st.textContent = 'Your money arrives... easily'; }
   try { const to = new URLSearchParams(window.location.search).get('to'); if (to) window._pendingTo = to; } catch {}
-  setTimeout(async () => { if (splash) splash.classList.add('hidden'); if (token) { await loadDash(); if (me) view = 'home'; } render(); }, 1200);
+  setTimeout(async () => {
+    if (splash) splash.classList.add('hidden');
+    render(); // show the app immediately instead of waiting for the server (it may be waking from sleep)
+    if (token) {
+      await loadDash();
+      // If the first attempt failed (e.g. the free server was still waking
+      // up), retry once before giving up — otherwise a valid saved login
+      // looks like a lost account.
+      if (!me) { await new Promise(r => setTimeout(r, 3000)); await loadDash(); }
+      if (me) { view = 'home'; render(); }
+    }
+  }, 1200);
 })();
