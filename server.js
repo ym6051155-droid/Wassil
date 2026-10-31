@@ -511,8 +511,11 @@ async function handle(req, res) {
     }
     if (p === '/api/lookup' && method === 'POST') {
       const u = findBySdg(String(body.account)) || findByFx(String(body.account));
-      if (!u) return sendJson(res, 404, { ok: false, error: 'not_found' });
-      return sendJson(res, 200, { ok: true, nameAr: u.fullNameAr, nameEn: u.fullNameEn, sdgAccount: u.sdgAccount, fxAccount: u.fxAccount });
+      if (u) return sendJson(res, 200, { ok: true, nameAr: u.fullNameAr, nameEn: u.fullNameEn, sdgAccount: u.sdgAccount, fxAccount: u.fxAccount });
+      const digits = String(body.account || '').replace(/[\s-]/g, '');
+      const card = db().cards.find((c) => String(c.fullNumber || '').replace(/\s/g, '') === digits);
+      if (card) { const owner = db().users.find((x) => x.id === card.userId); if (owner) return sendJson(res, 200, { ok: true, nameAr: owner.fullNameAr, nameEn: owner.fullNameEn, sdgAccount: owner.sdgAccount, fxAccount: owner.fxAccount, cardMasked: masked(card.fullNumber) }); }
+      return sendJson(res, 404, { ok: false, error: 'not_found' });
     }
     if (p === '/api/fx/fund' && method === 'POST') {
       const amountSdg = Math.floor(Number(body.amountSdg));

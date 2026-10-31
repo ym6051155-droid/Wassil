@@ -662,7 +662,7 @@ function transferView(){
   <div class="card">
   <label>${t('beneficiary')}</label>
   <select id="tr-user-select" onchange="onTransferUserChange(this.value)"><option value="">${t('chooseUser')}</option>${opts}<option value="__other__">${t('otherAccount')}</option></select>
-  <label>${t('toAccount')}</label><input id="tr-to" placeholder="1002">
+  <label>${t('toAccount')}</label><input id="tr-to" placeholder="1002" oninput="lookupDebounced('tr-to','tr-name')">
   <label>${t('amountSdg')}</label><input id="tr-amt" type="number" min="1" value="0">
   <label>${t('noteOptional')}</label><input id="tr-note" placeholder="${lang === 'en' ? 'Example: monthly expenses' : 'مثال: مصاريف الشهر'}">
   <div id="tr-name" class="muted"></div><button class="btn secondary" onclick="lookupAcc()">Check / تحقق</button>
@@ -687,7 +687,7 @@ function fxView(){
   const fxRows = fxTxs.map(opRow).join('') || `<p class="muted">—</p>`;
   const fundForm = fxAction === 'fund' ? `<div class="card"><h3>${t('fundFx')}</h3><label>${t('amountSdg')}</label><input id="fx-amt" type="number" min="1">
   <button class="btn" onclick="doFxFund()">${t('fundFx')}</button></div>` : '';
-  const transferForm = fxAction === 'transfer' ? `<div class="card"><h3>${t('fxTransfer')}</h3><label>FX account / رقم الحساب الأجنبي</label><input id="fx-to" placeholder="2002 0000 0002">
+  const transferForm = fxAction === 'transfer' ? `<div class="card"><h3>${t('fxTransfer')}</h3><label>FX account / رقم الحساب الأجنبي</label><input id="fx-to" placeholder="2002 0000 0002" oninput="lookupDebounced('fx-to','fx-name')"><div id="fx-name" class="muted"></div>
   <label>${t('amountUsd')}</label><input id="fx-usd" type="number" step="0.01" min="0.01">
   <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button>
   ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان.'}</p>` : ''}</div>` : '';
@@ -712,7 +712,7 @@ function fxView(){
   <div class="card">${fxRows}</div>`;
 }
 function setFxAction(a){ fxAction = a; render(); }
-function pickFxUser(acct){ fxAction = 'transfer'; render(); const inp = $('#fx-to'); if (inp) inp.value = acct; }
+function pickFxUser(acct){ fxAction = 'transfer'; render(); const inp = $('#fx-to'); if (inp) { inp.value = acct; doLookupInto('fx-to', 'fx-name'); } }
 function cardTopupView(){
   if (!me) return loginView();
   const cards = dash?.cards || [];
@@ -746,7 +746,7 @@ function cardTransferView(){
   <div class="page-title">${t('cardTransferTitle')}</div>
   <div class="card">
   <label>${t('sourceCard')}</label><select id="cc-from" onchange="ccFromId=Number(this.value);const n=document.getElementById('cc-bal');if(n)n.textContent='${lang === 'en' ? 'Source card balance: ' : 'رصيد بطاقة المصدر: '}' + (this.options[this.selectedIndex].dataset.bal || '');">${cards.map(c => `<option value="${c.id}" data-bal="${moneyUsd(c.balanceCents)}" ${c.id === ccFromId ? 'selected' : ''}>${esc(c.kind || 'Visa')} — ${esc(c.masked)}</option>`).join('')}</select>
-  <label>${t('recipientCard')}</label><input id="cc-to" placeholder="0000 0000 0000 0000">
+  <label>${t('recipientCard')}</label><input id="cc-to" placeholder="0000 0000 0000 0000" oninput="lookupDebounced('cc-to','cc-name')"><div id="cc-name" class="muted"></div>
   <label>${t('amountUsd')}</label><input id="cc-amt" type="number" step="0.01" min="0.01" value="10.00">
   <div id="cc-bal" class="muted">${lang === 'en' ? 'Source card balance: ' : 'رصيد بطاقة المصدر: '}${src ? moneyUsd(src.balanceCents) : ''}</div>
   <label>${t('noteOptional')}</label><input id="cc-note">
@@ -760,8 +760,9 @@ async function doCardTransfer(){
   if (!from || !to || !amt) { const el = $('#cc-err'); if (el) el.textContent = lang === 'en' ? 'Fill in card, recipient and amount' : 'أكمل البطاقة والمستلم والمبلغ'; return; }
   // Review step; the optional note is shown on the form only — the card-transfer API takes no note field, so it is not sent or stored.
   await loadDash();
+  const ccName = $('#cc-name') ? $('#cc-name').textContent : '';
   const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
-  if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine] }))) return;
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', ccName || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine] }))) return;
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
   const runCard = async (p) => api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt, pin: p }) });
@@ -1105,9 +1106,21 @@ async function doActivate(){
   catch(e){ $('#su-err').textContent = e.message; }
 }
 function doLogout(){ token=''; localStorage.removeItem('wassil-token'); me=null; go('login'); }
-async function lookupAcc(){
-  try { const j = await api('/api/lookup', { method:'POST', body: JSON.stringify({ account: $('#tr-to').value }) });
-    $('#tr-name').textContent = (lang==='en' ? j.nameEn : j.nameAr) + ' — ' + j.sdgAccount; } catch { $('#tr-name').textContent = 'Not found / غير موجود'; }
+async function lookupAcc(){ await doLookupInto('tr-to', 'tr-name'); }
+async function doLookupInto(inputId, nameId){
+  const inp = document.getElementById(inputId), el = document.getElementById(nameId);
+  if (!inp || !el) return;
+  try { const j = await api('/api/lookup', { method:'POST', body: JSON.stringify({ account: inp.value }) });
+    el.textContent = (lang==='en' ? (j.nameEn || j.nameAr) : j.nameAr) + ' — ' + (j.cardMasked || j.sdgAccount); }
+  catch { el.textContent = lang === 'en' ? 'Not found' : 'غير موجود'; }
+}
+let _lookupTimer = null;
+function lookupDebounced(inputId, nameId){
+  const inp = document.getElementById(inputId), el = document.getElementById(nameId);
+  if (!inp || !el) return;
+  if (inp.value.trim().length < 4) { el.textContent = ''; return; }
+  clearTimeout(_lookupTimer);
+  _lookupTimer = setTimeout(() => doLookupInto(inputId, nameId), 400);
 }
 async function doTransfer(){
   // Review step: elegant in-app sheet with the transfer summary.
@@ -1137,9 +1150,10 @@ async function doFxSell(){
 }
 async function doFxTransfer(){
   const to = $('#fx-to').value, amt = $('#fx-usd').value;
+  const fxName = $('#fx-name') ? $('#fx-name').textContent : '';
   await loadDash();
   const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
-  if (!(await confirmSheet({ title: lang === 'en' ? 'Review FX transfer' : 'مراجعة التحويل الأجنبي', lines: [[lang === 'en' ? 'To FX account' : 'إلى الحساب الأجنبي', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review FX transfer' : 'مراجعة التحويل الأجنبي', lines: [[lang === 'en' ? 'To FX account' : 'إلى الحساب الأجنبي', fxName || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
   const runFx = async (p) => api('/api/fx/transfer', { method:'POST', body: JSON.stringify({ toFxAccount: to, amountUsd: amt, pin: p }) });
