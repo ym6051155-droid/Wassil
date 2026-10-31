@@ -701,7 +701,7 @@ async function handle(req, res) {
     // ---- Portfolio profit/loss follows automatically because it is valued
     // ---- at the live price; buy/sell execute at the live price, so a sale
     // ---- realises the gain or loss in cash.
-    const PRICE_TICK_MS = 60 * 60 * 1000, PRICE_MAX_STEP = 0.02, PRICE_MAX_STEPS = 24;
+    const PRICE_TICK_MS = 5 * 60 * 1000, PRICE_MAX_STEP = 0.02, PRICE_MAX_STEPS = 288;
     function liveAssets(){
       const d = db();
       if (!d.investPrices) { d.investPrices = {}; ASSETS.forEach(a => { d.investPrices[a.id] = a.priceSdg; }); }
