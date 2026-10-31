@@ -267,18 +267,19 @@ function servicesView(){
   const items = [
     [IC.card, t('cards'), L('رصيد بالدولار فقط، عرض التفاصيل بأيقونة العين ونسخ الرقم، تجميد وحدود', 'USD balance only, eye-icon details and number copy, freeze and limits'), "go('cards')"],
     [IC.card, t('topup'), L('من الحساب الأجنبي فقط، بالدولار — اشحن الأجنبي من الجنيه بسعر 10,000', 'From the FX account only, in USD — fund FX from SDG at 10,000'), "go('cardTopup')"],
-    [IC.transfer, t('cardTransfer'), L('تحويل بالدولار بين بطاقات وصل فقط', 'USD transfer between Wassil cards only'), "go('cardTransfer')"],
-    [IC.bank, t('deposits'), L('ودائع لأجل من 24 ساعة إلى سنة — 12% حتى 30% حسب المبلغ', 'Term deposits from 24h to a year — 12% to 30% by amount'), "go('deposits')"],
+    [IC.transfer, t('cardTransfer'), L('من بطاقة إلى بطاقة فقط — بالدولار', 'USD transfer between Wassil cards only'), "go('cardTransfer')"],
+    [IC.bank, t('deposits'), L('أرباح سنوية 12%–30% حسب المبلغ والمدة', 'Term deposits from 24h to a year — 12% to 30% by amount'), "go('deposits')"],
     [IC.trend, t('invest'), L('عملات وذهب وأسهم تجريبية بأسعار وهمية معلنة', 'Demo currencies, gold and stocks at announced fake prices'), "go('invest')"],
-    [IC.calc, t('loanCalc'), L('حاسبة أقساط افتراضية 10% — تجريبي فقط', 'Demo instalment calculator at 10% — demo only'), "go('loan')"],
-    [IC.repeat, t('orders'), L('تحويلات متكررة محفوظة تنفذ تلقائياً', 'Saved recurring transfers that run automatically'), "go('orders')"],
-    [IC.target, t('goals'), L('ادخر لهدفك بمبلغ ومدة محددين', 'Save towards a goal with a set amount and term'), "go('goals')"],
-    [IC.chart, t('statement'), L('كل عملياتك مع المرجع والتاريخ', 'All your operations with reference and date'), "go('statement')"],
-    [IC.shield, t('security'), L('بصمة، كلمة مرور، وأجهزة موثوقة', 'Fingerprint, password and trusted devices'), "go('security')"],
-    [IC.pin, t('branches'), L('مواقع الفروع وأوقات العمل', 'Branch locations and opening hours'), "go('branches')"],
-    [IC.headset, t('faq'), L('أسئلة شائعة ودعم تجريبي', 'FAQ and demo support'), "go('faq')"],
+    [IC.calc, t('loanCalc'), L('حاسبة أقساط افتراضية 10%', 'Demo instalment calculator at 10% — demo only'), "go('loan')"],
+    [IC.repeat, t('orders'), L('تحويلات متكررة مجدولة وهمياً', 'Saved recurring transfers that run automatically'), "go('orders')"],
+    [IC.target, t('goals'), L('ادخر نحو هدفك خطوة بخطوة', 'Save towards a goal with a set amount and term'), "go('goals')"],
+    [IC.chart, t('statement'), L('الوارد والصادر وكل العمليات', 'All your operations with reference and date'), "go('statement')"],
+    [IC.shield, t('security'), L('الرمز، أسئلة الأمان، الأجهزة', 'Fingerprint, password and trusted devices'), "go('security')"],
+    [IC.pin, t('branches'), L('قائمة وهمية قابلة للبحث', 'Branch locations and opening hours'), "go('branches')"],
+    [IC.headset, t('faq'), L('أسئلة شائعة عن النموذج التجريبي', 'FAQ and demo support'), "go('faq')"],
   ];
-  return `<div class="page-title">${t('bankServicesPage')}</div><p class="page-sub">${t('allServicesInOne')}</p>
+  return `${backLink(t('backHome'), 'home')}
+  <div class="page-title">${t('bankServicesPage')}</div><p class="page-sub">${t('allServicesInOne')}</p>
   <div class="svc-grid">${items.map(([ic, ti, de, act]) => `<button type="button" class="svc-card" onclick="${act}"><span class="svc-ic">${ic}</span><span class="svc-title" style="display:block">${ti}</span><span class="svc-desc" style="display:block">${de}</span></button>`).join('')}</div>`;
 }
 function accountView(){
@@ -521,7 +522,8 @@ async function loadDeposits(){
   } catch(e){ el.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
 }
 function investView(){
-  return `<div class="card"><h2>${t('invest')} — <span class="badge">تجريبي</span></h2><p class="muted">Demo only — fake announced prices, no real trading or real money.</p>
+  return `${backLink(t('backServices'), 'services')}
+  <div class="card"><h2>${t('invest')} — <span class="badge">تجريبي</span></h2><p class="muted">Demo only — fake announced prices, no real trading or real money.</p>
   <div id="inv-assets"></div><div id="inv-port"></div><div id="inv-err" class="err"></div>
   <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
 }
@@ -566,7 +568,8 @@ function adminView(){
   <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
 }
 function securityView(){
-  return `<div class="card"><h2>${t('security')}</h2>
+  return `${backLink(t('backServices'), 'services')}
+  <div class="card"><h2>${t('security')}</h2>
   <p class="muted">Fingerprint key is bound to this account and this device only. The fingerprint image is never stored and never leaves the device.</p>
   <button class="btn" onclick="enableFp()">${t('enableFingerprint')}</button>
   <button class="btn secondary" onclick="disableFp()">${t('disableFingerprint')}</button><div id="sec-err" class="err"></div><div id="sec-ok" class="ok"></div>
