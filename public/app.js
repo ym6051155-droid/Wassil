@@ -174,6 +174,43 @@ const app = () => document.getElementById('app');
 function t(k){ const v = I18N[k]; return v ? (lang === 'en' ? v.en : v.ar) : k; }
 function nameOf(u){ return lang === 'en' && u && u.fullNameEn ? u.fullNameEn : (u ? u.fullNameAr : ''); }
 function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'), 3000); }
+const SECURITY_QUESTIONS = [
+  { id: 'school', ar: 'ما اسم مدرستك الابتدائية؟', en: 'What was your primary school?' },
+  { id: 'pet', ar: 'ما اسم أول حيوان أليف لك؟', en: "What was your first pet's name?" },
+  { id: 'birthcity', ar: 'في أي مدينة وُلدت؟', en: 'In which city were you born?' },
+  { id: 'friend', ar: 'ما اسم صديق طفولتك المقرب؟', en: "What is your childhood best friend's name?" },
+  { id: 'fatherjob', ar: 'ما مهنة والدك؟', en: "What is your father's profession?" },
+  { id: 'teacher', ar: 'ما اسم أول معلم تتذكره؟', en: 'What is the first teacher you remember?' },
+];
+function qText(q){ return lang === 'en' ? q.en : q.ar; }
+function friendlyErr(m){
+  const map = {
+    pin_required: lang === 'en' ? 'Enter your 4-digit PIN' : 'أدخل رمز PIN المكون من 4 أرقام',
+    pin_incorrect: lang === 'en' ? 'Wrong PIN — try again' : 'رمز PIN غير صحيح — حاول مجدداً',
+    pin_locked: lang === 'en' ? 'PIN checks are locked for 5 minutes after repeated wrong attempts' : 'تم قفل التحقق بالـ PIN لمدة 5 دقائق بعد محاولات خاطئة متكررة',
+    reset_failed: lang === 'en' ? 'The answers did not match' : 'الإجابات غير مطابقة',
+    no_pin: lang === 'en' ? 'No PIN set yet' : 'لم يتم ضبط رمز PIN بعد',
+    pin_exists: lang === 'en' ? 'A PIN is already set — change it instead' : 'رمز PIN مضبوط بالفعل — غيّره بدلاً من ذلك',
+    bad_proof: lang === 'en' ? 'Current PIN or password is wrong' : 'رمز PIN الحالي أو كلمة المرور غير صحيحة',
+    bad_password: lang === 'en' ? 'Password is wrong' : 'كلمة المرور غير صحيحة',
+    bad_pin: lang === 'en' ? 'PIN must be exactly 4 digits' : 'رمز PIN يجب أن يكون 4 أرقام بالضبط',
+  };
+  return map[m] || m;
+}
+function pinSheet(title){
+  return new Promise((resolve) => {
+    const back = document.createElement('div'); back.className = 'sheet-back';
+    back.innerHTML = `<div class="sheet"><div class="sheet-title">${esc(title)}</div>
+    <input id="pin-inp" type="password" inputmode="numeric" maxlength="4" autocomplete="off" style="font-size:24px;letter-spacing:12px;text-align:center">
+    <div class="sheet-actions"><button type="button" class="btn secondary" id="sheet-cancel">${esc(lang === 'en' ? 'Cancel' : 'إلغاء')}</button><button type="button" class="btn" id="sheet-ok">${esc(lang === 'en' ? 'Confirm' : 'تأكيد')}</button></div></div>`;
+    const done = (v) => { back.remove(); resolve(v); };
+    back.querySelector('#sheet-ok').onclick = () => { const v = back.querySelector('#pin-inp').value.trim(); if (!/^\d{4}$/.test(v)) { back.querySelector('#pin-inp').style.borderColor = '#dc2626'; return; } done(v); };
+    back.querySelector('#sheet-cancel').onclick = () => done(null);
+    back.onclick = (e) => { if (e.target === back) done(null); };
+    document.body.appendChild(back);
+    const inp = back.querySelector('#pin-inp'); setTimeout(() => inp.focus(), 50);
+  });
+}
 // In-app confirmation sheet (Wassil design) — replaces the browser's native
 // confirm() dialog, whose title bar showed the site URL and clashed with the app.
 function confirmSheet({ title, lines = [], note = '', confirmLabel, cancelLabel, danger = false }) {
@@ -265,7 +302,7 @@ function loginView(){
   ${fp}
   <div id="li-err" class="err"></div>
   <button type="button" class="qr-btn" onclick="go('qr')">${IC.qr} ${t('qrShare')}</button>
-  <div class="link-row"><button type="button" onclick="go('signup')">${t('newSignup')}</button><button type="button" onclick="go('faq')">${t('cannotLogin')}</button></div></div>
+  <div class="link-row"><button type="button" onclick="go('signup')">${t('newSignup')}</button><button type="button" onclick="go('forgot')">${lang === 'en' ? 'Forgot password?' : 'نسيت كلمة المرور؟'}</button><button type="button" onclick="go('faq')">${t('cannotLogin')}</button></div></div>
   <div class="auth-footer"><div class="auth-links"><button type="button" class="auth-link" onclick="window._policyReturn='login';go('policies')"><span class="auth-link-ic">${IC.policy}</span>${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</button>
   <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.info}</span>${t('about')}</button>
   <button type="button" class="auth-link" onclick="go('branches')"><span class="auth-link-ic">${IC.pin}</span>${t('locations')}</button>
@@ -516,6 +553,7 @@ function transferView(){
   <label>${t('noteOptional')}</label><input id="tr-note" placeholder="${lang === 'en' ? 'Example: monthly expenses' : 'مثال: مصاريف الشهر'}">
   <div id="tr-name" class="muted"></div><button class="btn secondary" onclick="lookupAcc()">Check / تحقق</button>
   <button class="btn" onclick="doTransfer()">${t('review')}</button><div id="tr-err" class="err"></div>
+  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre so every transfer asks for confirmation.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان ليطلب منك تأكيد كل تحويل.'} <button type="button" class="link-btn" onclick="go('security')">${lang === 'en' ? 'Security Centre' : 'مركز الأمان'}</button></p>` : ''}
   <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>
   <div class="tabs"><button type="button" class="tab-btn ${transferTab === 'users' ? 'active' : ''}" onclick="setTransferTab('users')">${t('registeredUsers')}</button><button type="button" class="tab-btn ${transferTab === 'saved' ? 'active' : ''}" onclick="setTransferTab('saved')">${t('savedBeneficiaries')}</button></div>
   <div class="card">${list}</div>`;
@@ -537,7 +575,8 @@ function fxView(){
   <button class="btn" onclick="doFxFund()">${t('fundFx')}</button></div>` : '';
   const transferForm = fxAction === 'transfer' ? `<div class="card"><h3>${t('fxTransfer')}</h3><label>FX account / رقم الحساب الأجنبي</label><input id="fx-to" placeholder="2002 0000 0002">
   <label>${t('amountUsd')}</label><input id="fx-usd" type="number" step="0.01" min="0.01">
-  <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button></div>` : '';
+  <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button>
+  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان.'}</p>` : ''}</div>` : '';
   return `${backLink(t('backServices'), 'services')}
   <div class="page-title">${t('fx')}</div>
   <div class="balance"><div class="balance-top"><span>${lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)'}</span></div>
@@ -595,6 +634,7 @@ function cardTransferView(){
   <div id="cc-bal" class="muted">${lang === 'en' ? 'Source card balance: ' : 'رصيد بطاقة المصدر: '}${src ? moneyUsd(src.balanceCents) : ''}</div>
   <label>${t('noteOptional')}</label><input id="cc-note">
   <button class="btn" onclick="doCardTransfer()">${t('reviewTransfer')}</button><div id="cc-err" class="err"></div>
+  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان.'}</p>` : ''}
   <button class="btn secondary" onclick="go('cards')">${t('back')}</button></div>`;
 }
 async function doCardTransfer(){
@@ -603,8 +643,10 @@ async function doCardTransfer(){
   if (!from || !to || !amt) { const el = $('#cc-err'); if (el) el.textContent = lang === 'en' ? 'Fill in card, recipient and amount' : 'أكمل البطاقة والمستلم والمبلغ'; return; }
   // Review step; the optional note is shown on the form only — the card-transfer API takes no note field, so it is not sent or stored.
   if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD']] }))) return;
-  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt }) }); toast('OK — ' + j.ref); await loadDash(); openCard(from); }
-  catch(e){ const el = $('#cc-err'); if (el) el.textContent = e.message; }
+  let pin = '';
+  if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
+  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt, pin }) }); toast('OK — ' + j.ref); await loadDash(); openCard(from); }
+  catch(e){ const el = $('#cc-err'); if (el) el.textContent = friendlyErr(e.message); }
 }
 function cardsView(){
   const cards = dash?.cards || [];
@@ -763,7 +805,46 @@ function securityView(){
   <p class="muted">${lang === 'en' ? 'Fingerprint key is bound to this account and this device only. The fingerprint image is never stored and never leaves the device.' : 'مفتاح البصمة مربوط بهذا الحساب وهذا الجهاز فقط. صورة البصمة لا تُحفظ أبداً ولا تغادر الجهاز.'}</p>
   <button class="btn" onclick="enableFp()">${t('enableFingerprint')}</button>
   <button class="btn secondary" onclick="disableFp()">${t('disableFingerprint')}</button><div id="sec-err" class="err"></div><div id="sec-ok" class="ok"></div>
-  <button class="btn secondary" onclick="go('services')">${t('backServices')}</button></div>`;
+  <button class="btn secondary" onclick="go('services')">${t('backServices')}</button></div>
+  <div class="card"><h2 style="font-size:17px">${lang === 'en' ? 'Security questions' : 'أسئلة الأمان'}</h2>
+  <p class="muted">${lang === 'en' ? 'Set two questions now. If you forget your password or PIN, answering them lets you reset it. Answers are stored hashed, never shown.' : 'اضبط سؤالين الآن. إذا نسيت كلمة المرور أو رمز PIN، الإجابة عليهما تتيح لك إعادة التعيين. الإجابات محفوظة مشفرة ولا تظهر أبداً.'}</p>
+  <p class="muted">${lang === 'en' ? 'Status: ' : 'الحالة: '}${me?.hasSecurityQuestions ? (lang === 'en' ? 'Set' : 'مضبوطة') : (lang === 'en' ? 'Not set' : 'غير مضبوطة')}</p>
+  <label>${lang === 'en' ? 'Question 1' : 'السؤال الأول'}</label><select id="sq-1">${SECURITY_QUESTIONS.map(q => `<option value="${q.id}">${qText(q)}</option>`).join('')}</select>
+  <label>${lang === 'en' ? 'Answer 1' : 'الإجابة الأولى'}</label><input id="sa-1">
+  <label>${lang === 'en' ? 'Question 2' : 'السؤال الثاني'}</label><select id="sq-2">${SECURITY_QUESTIONS.map(q => `<option value="${q.id}">${qText(q)}</option>`).join('')}</select>
+  <label>${lang === 'en' ? 'Answer 2' : 'الإجابة الثانية'}</label><input id="sa-2">
+  <button class="btn" onclick="doSaveQuestions()">${lang === 'en' ? 'Save security questions' : 'حفظ أسئلة الأمان'}</button><div id="sq-err" class="err"></div><div id="sq-ok" class="ok"></div></div>
+  <div class="card"><h2 style="font-size:17px">${lang === 'en' ? 'Transfer PIN (4 digits)' : 'رمز PIN للتحويل (4 أرقام)'}</h2>
+  <p class="muted">${lang === 'en' ? 'Once set, every transfer asks for this PIN. After 5 wrong attempts, PIN checks lock for 5 minutes.' : 'بعد ضبطه، كل تحويل سيطلب هذا الرمز. بعد 5 محاولات خاطئة، يُقفل التحقق بالـ PIN لمدة 5 دقائق.'}</p>
+  <p class="muted">${lang === 'en' ? 'Status: ' : 'الحالة: '}${me?.pinSet ? (lang === 'en' ? 'Set' : 'مضبوط') : (lang === 'en' ? 'Not set' : 'غير مضبوط')}</p>
+  ${me?.pinSet ? `<label>${lang === 'en' ? 'Current PIN or password' : 'رمز PIN الحالي أو كلمة المرور'}</label><input id="pin-proof" type="password">` : `<label>${lang === 'en' ? 'Your password (to set the PIN)' : 'كلمة المرور (لضبط الرمز)'}</label><input id="pin-proof" type="password">`}
+  <label>${lang === 'en' ? 'New 4-digit PIN' : 'رمز PIN الجديد (4 أرقام)'}</label><input id="pin-new" type="password" inputmode="numeric" maxlength="4">
+  <button class="btn" onclick="doSavePin()">${me?.pinSet ? (lang === 'en' ? 'Change PIN' : 'تغيير رمز PIN') : (lang === 'en' ? 'Set PIN' : 'ضبط رمز PIN')}</button><div id="pin-err" class="err"></div><div id="pin-ok" class="ok"></div>
+  <p class="muted">${lang === 'en' ? 'Forgot your PIN while logged out? Use "Forgot password?" on the login screen and answer your security questions to reset it.' : 'نسيت رمز PIN وأنت خارج الحساب؟ استخدم "نسيت كلمة المرور؟" في شاشة الدخول وأجب على أسئلة الأمان لإعادة تعيينه.'}</p></div>`;
+}
+function forgotView(){
+  const qs = window._forgotQs || null; const em = window._forgotEmail || '';
+  const qHtml = qs ? qs.map(q => `<label>${qText(q)}</label><input id="fq-${q.id}">`).join('') : '';
+  return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button></div>
+  <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
+  <div class="auth-card">${backLink(t('login'), 'login')}<h2>${lang === 'en' ? 'Forgot password / PIN' : 'نسيت كلمة المرور / رمز PIN'}</h2>
+  <p class="muted">${lang === 'en' ? 'Answer your security questions to reset your password, your PIN, or both. If you never set security questions, this reset cannot work — contact the admin.' : 'أجب على أسئلة الأمان لإعادة تعيين كلمة المرور أو رمز PIN أو كليهما. إذا لم تضبط أسئلة أمان من قبل، لا تعمل هذه الطريقة — راجع الأدمن.'}</p>
+  <label>${t('email')}</label><input id="fg-email" type="email" value="${esc(em)}">
+  ${qs ? '' : `<button class="btn" onclick="doForgotLoad()">${lang === 'en' ? 'Show my questions' : 'عرض أسئلتي'}</button>`}
+  ${qs ? `<div>${qHtml}</div><label>${lang === 'en' ? 'New password (optional)' : 'كلمة المرور الجديدة (اختياري)'}</label><input id="fg-pass" type="password"><label>${lang === 'en' ? 'New 4-digit PIN (optional)' : 'رمز PIN الجديد (4 أرقام، اختياري)'}</label><input id="fg-pin" type="password" inputmode="numeric" maxlength="4"><button class="btn" onclick="doForgotReset()">${lang === 'en' ? 'Reset' : 'إعادة التعيين'}</button>` : ''}
+  <div id="fg-err" class="err"></div><div id="fg-ok" class="ok"></div></div></div>`;
+}
+async function doForgotLoad(){
+  const email = $('#fg-email').value.trim();
+  try { const j = await api('/api/security/questions?email=' + encodeURIComponent(email)); window._forgotEmail = email; window._forgotQs = j.questions; render(); }
+  catch(e){ $('#fg-err').textContent = lang === 'en' ? 'No security questions found for this email' : 'لا توجد أسئلة أمان لهذا البريد'; }
+}
+async function doForgotReset(){
+  const answers = (window._forgotQs || []).map(q => ({ id: q.id, answer: document.getElementById('fq-' + q.id).value }));
+  const newPassword = $('#fg-pass').value, newPin = $('#fg-pin').value.trim();
+  if (!newPassword && !newPin) { $('#fg-err').textContent = lang === 'en' ? 'Enter a new password, a new PIN, or both' : 'أدخل كلمة مرور جديدة أو رمز PIN جديد أو كليهما'; return; }
+  try { await api('/api/security/reset', { method:'POST', body: JSON.stringify({ email: window._forgotEmail, answers, newPassword, newPin }) }); $('#fg-ok').textContent = lang === 'en' ? 'Reset done — sign in with the new details' : 'تمت إعادة التعيين — سجّل دخول بالبيانات الجديدة'; window._forgotQs = null; setTimeout(() => go('login'), 1500); }
+  catch(e){ $('#fg-err').textContent = friendlyErr(e.message); }
 }
 function policiesView(){
   const sec = (ttl, body) => `<div class="card"><h2 style="font-size:17px">${ttl}</h2><p class="muted">${body}</p></div>`;
@@ -786,6 +867,8 @@ function policiesView(){
     lang === 'en' ? 'Welcome bonus: 15,000 SDG on activation of your first account per device. Invite bonus: 50,000 SDG for the new account that enters a valid invite code (WSL + the inviter\'s SDG account, e.g. WSL1002) at activation — once per account and once per device. The inviter gets nothing extra. An invalid code still activates without the invite bonus.' : 'المكافأة الترحيبية: ١٥٬٠٠٠ ج.س عند تفعيل أول حساب من كل جهاز. مكافأة الدعوة: ٥٠٬٠٠٠ ج.س للحساب الجديد الذي يكتب رمز دعوة صحيح (WSL + رقم حساب الداعي بالجنيه، مثلاً WSL1002) عند التفعيل — مرة واحدة للحساب ومرة واحدة للجهاز. الداعي لا يأخذ شيئاً إضافياً. الرمز غير الصحيح يفعّل الحساب من غير مكافأة الدعوة.')}
   ${sec(lang === 'en' ? '7 — Admin, freeze and ban' : '٧ — الأدمن والتجميد والحظر',
     lang === 'en' ? 'The admin account is not an ordinary user account: it cannot transfer, pay bills or hold cards. It funds user accounts in SDG and USD (unlimited), freezes a specific amount or all assets, unbans only with admin approval, bans users, and stops or restarts user cards. A banned account cannot log in; a frozen amount cannot be spent until the admin releases it. Fingerprint login is real device biometrics (WebAuthn) enrolled after password login; password login always remains as fallback.' : 'حساب الأدمن ليس حساب مستخدم عادياً: لا يحوّل ولا يدفع فواتير ولا يملك بطاقات. يموّل حسابات المستخدمين بالجنيه والدولار (من غير حد)، ويجمّد مبلغاً معيناً أو كل الأصول، ولا يُعاد فتح الحساب إلا بموافقة الأدمن، ويحظر المستخدمين، ويوقف بطاقاتهم أو يعيد تشغيلها. الحساب المحظور لا يستطيع الدخول، والمبلغ المجمّد لا يُصرف حتى يفكّه الأدمن. دخول البصمة بصمة جهاز حقيقية (WebAuthn) تُسجّل بعد دخول كلمة المرور؛ ودخول كلمة المرور يبقى دائماً كبديل.')}
+  ${sec(lang === 'en' ? '8 — Security questions and transfer PIN' : '٨ — أسئلة الأمان ورمز PIN للتحويل',
+    lang === 'en' ? 'In the Security Centre you can set two security questions and a 4-digit transfer PIN. Once a PIN is set, every SDG, FX and card-to-card transfer asks for it after the review screen, and the transfer is rejected without the correct PIN. After 5 wrong PIN attempts, PIN checks lock for 5 minutes. Change the PIN in the Security Centre with your current PIN or your password. If you forget your password or PIN, use "Forgot password?" on the login screen and answer your security questions to reset either or both — but only if you set the questions before forgetting. Answers are stored hashed and are never shown.' : 'في مركز الأمان يمكنك ضبط سؤالين للأمان ورمز PIN للتحويل من 4 أرقام. بعد ضبط الرمز، كل تحويل بالجنيه أو الأجنبي أو من بطاقة إلى بطاقة يطلب الرمز بعد شاشة المراجعة، ويُرفض التحويل من دون الرمز الصحيح. بعد 5 محاولات خاطئة، يُقفل التحقق بالـ PIN لمدة 5 دقائق. غيّر الرمز من مركز الأمان برمز PIN الحالي أو بكلمة المرور. إذا نسيت كلمة المرور أو الرمز، استخدم "نسيت كلمة المرور؟" في شاشة الدخول وأجب على أسئلة الأمان لإعادة تعيين أحدهما أو كليهما — لكن فقط إذا ضبطت الأسئلة قبل النسيان. الإجابات محفوظة مشفرة ولا تظهر أبداً.')}
   ${agreed ? `<button class="btn" onclick="agreePolicy()">${lang === 'en' ? 'Already agreed — continue' : 'تمت الموافقة سابقاً — متابعة'}</button>` : `<p class="muted" id="policy-timer">${lang === 'en' ? 'Read the policy — the agree button activates after 10 seconds.' : 'اقرأ السياسة — زر الموافقة يتفعل بعد 10 ثواني.'}</p><button class="btn" id="policy-agree-btn" disabled onclick="agreePolicy()"><span id="policy-check" style="opacity:.35">○</span> ${lang === 'en' ? 'I agree to the site policy' : 'موافق على سياسة الموقع'}</button>`}
   <p class="muted">${lang === 'en' ? 'Agreeing means you understood this is a demo with fake money, not a real bank.' : 'الموافقة تعني أنك فهمت أن هذا نموذج تجريبي بأموال وهمية، وليس بنكاً حقيقياً.'}</p>`;
 }
@@ -833,8 +916,9 @@ function render(){
   else if (view === 'branches') html = simpleView(t('branches'), `<div id="branches-list"></div>`, 'home', '');
   else if (view === 'faq') html = simpleView(t('faq'), `<button class="btn" onclick="window._policyReturn='faq';go('policies')">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</button>`, 'home', '');
   else if (view === 'policies') html = policiesView();
+  else if (view === 'forgot') html = forgotView();
   else html = homeView();
-  const logged = !!me && view !== 'login' && view !== 'signup';
+  const logged = !!me && view !== 'login' && view !== 'signup' && view !== 'forgot';
   if (logged) html = userbar() + html;
   app().innerHTML = html;
   // Policy reading timer: the agree button stays disabled for 10 seconds
@@ -906,16 +990,22 @@ async function doTransfer(){
   const to = $('#tr-to') ? $('#tr-to').value : ''; const amt = $('#tr-amt') ? $('#tr-amt').value : '';
   const name = $('#tr-name') ? $('#tr-name').textContent : '';
   if (!(await confirmSheet({ title: lang === 'en' ? 'Review transfer' : 'مراجعة التحويل', lines: [[lang === 'en' ? 'To' : 'إلى', name || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' SDG']], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
-  try { await loadDash(); const j = await api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt }) });
-    toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#tr-err').textContent = e.message; }
+  let pin = '';
+  if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
+  try { await loadDash(); const j = await api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt, pin }) });
+    toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#tr-err').textContent = friendlyErr(e.message); }
 }
 async function doFxFund(){
   try { const j = await api('/api/fx/fund', { method:'POST', body: JSON.stringify({ amountSdg: $('#fx-amt').value }) });
     toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#fx-err').textContent = e.message; }
 }
 async function doFxTransfer(){
-  try { const j = await api('/api/fx/transfer', { method:'POST', body: JSON.stringify({ toFxAccount: $('#fx-to').value, amountUsd: $('#fx-usd').value }) });
-    toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#fx-err').textContent = e.message; }
+  const to = $('#fx-to').value, amt = $('#fx-usd').value;
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review FX transfer' : 'مراجعة التحويل الأجنبي', lines: [[lang === 'en' ? 'To FX account' : 'إلى الحساب الأجنبي', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD']], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
+  let pin = '';
+  if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
+  try { const j = await api('/api/fx/transfer', { method:'POST', body: JSON.stringify({ toFxAccount: to, amountUsd: amt, pin }) });
+    toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#fx-err').textContent = friendlyErr(e.message); }
 }
 async function requestCard(){
   try { const j = await api('/api/cards/request', { method:'POST', body: '{}' }); toast('Card requested / تم طلب البطاقة'); await loadDash(); go('cards'); }
@@ -1040,6 +1130,21 @@ async function enableFp(){
     await api('/api/webauthn/register/verify', { method:'POST', body: JSON.stringify({ credential: payload }) });
     $('#sec-ok').textContent = 'Fingerprint login enabled for this device / تم تفعيل الدخول بالبصمة لهذا الجهاز';
   } catch(e){ $('#sec-err').textContent = e.message; }
+}
+async function doSaveQuestions(){
+  const q1 = $('#sq-1').value, a1 = $('#sa-1').value, q2 = $('#sq-2').value, a2 = $('#sa-2').value;
+  if (q1 === q2) { $('#sq-err').textContent = lang === 'en' ? 'Pick two different questions' : 'اختر سؤالين مختلفين'; return; }
+  try { await api('/api/security/questions', { method:'POST', body: JSON.stringify({ questions: [{ id: q1, answer: a1 }, { id: q2, answer: a2 }] }) }); $('#sq-ok').textContent = lang === 'en' ? 'Security questions saved' : 'تم حفظ أسئلة الأمان'; await loadDash(); render(); }
+  catch(e){ $('#sq-err').textContent = friendlyErr(e.message); }
+}
+async function doSavePin(){
+  const proof = $('#pin-proof').value, np = $('#pin-new').value.trim();
+  if (!/^\d{4}$/.test(np)) { $('#pin-err').textContent = friendlyErr('bad_pin'); return; }
+  try {
+    if (me?.pinSet) await api('/api/security/pin/change', { method:'POST', body: JSON.stringify({ newPin: np, currentPin: /^\d{4}$/.test(proof) ? proof : '', password: proof }) });
+    else await api('/api/security/pin/set', { method:'POST', body: JSON.stringify({ pin: np, password: proof }) });
+    $('#pin-ok').textContent = lang === 'en' ? 'PIN saved' : 'تم حفظ رمز PIN'; await loadDash(); render();
+  } catch(e){ $('#pin-err').textContent = friendlyErr(e.message); }
 }
 async function disableFp(){ try { await api('/api/webauthn/disable', { method:'POST', body:'{}' }); toast('Disabled / تم الإلغاء'); } catch(e){ toast(e.message); } }
 async function doFpLogin(){

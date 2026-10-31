@@ -346,13 +346,16 @@ async function handle(req, res) {
       } catch (e) { return sendJson(res, 401, { ok: false, error: 'webauthn_failed', detail: e.message }); }
     }
 
-    // All remaining endpoints require auth.
-    if (!me) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
+    // All remaining endpoints require auth, except the two public security
+    // recovery routes (fetching one's own question texts, and resetting by
+    // answering them) — they must work while logged out.
+    const isPublicRecovery = (p === '/api/security/questions' && method === 'GET') || (p === '/api/security/reset' && method === 'POST');
+    if (!me && !isPublicRecovery) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
     // The admin account is NOT an ordinary user account: it cannot perform
     // ordinary operations for itself (transfers, FX, bills, cards, deposits,
     // investments, goals, orders). It only administers other accounts through
     // /api/admin/* and views data through /api/dashboard and /api/transactions.
-    if (me.role === 'admin') {
+    if (me && me.role === 'admin') {
       const ordinaryBlocked = p === '/api/transfer' || p === '/api/fx/fund' || p === '/api/fx/transfer' || p === '/api/bills/pay' || p.startsWith('/api/cards') || (p === '/api/deposits' && method === 'POST') || p === '/api/investments/buy' || p === '/api/investments/sell' || p === '/api/investments/portfolio' || (p === '/api/goals' && method === 'POST') || (p === '/api/orders' && method === 'POST');
       if (ordinaryBlocked) return sendJson(res, 403, { ok: false, error: 'admin_no_ordinary' });
     }
@@ -361,6 +364,7 @@ async function handle(req, res) {
       const to = findBySdg(String(body.toAccount));
       const amount = Math.floor(Number(body.amount));
       if (!to || to.id === me.id || to.status === 'banned' || !(amount > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
+      if (!checkPin(me, body.pin, res)) return;
       if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
       if (availableSdg(me) < amount) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       const ref = dbmod.refFor(db().nextTxSeq);
@@ -369,6 +373,93 @@ async function handle(req, res) {
       addTx({ userId: to.id, type: 'transfer_in', titleAr: 'تحويل وارد من ' + me.fullNameAr, titleEn: 'Incoming transfer from ' + (me.fullNameEn || me.fullNameAr), amountSdg: amount, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: to.fullNameAr, toAccount: to.sdgAccount, ref });
       save();
       return sendJson(res, 200, { ok: true, ref, user: publicUser(me) });
+    }
+    // ---- security questions + 4-digit transfer PIN ----
+    // Answers are stored only as salted hashes (same scrypt scheme as
+    // passwords) — never in plain text, never returned by any endpoint.
+    const SECURITY_QUESTIONS = [
+      { id: 'school', ar: 'ما اسم مدرستك الابتدائية؟', en: 'What was your primary school?' },
+      { id: 'pet', ar: 'ما اسم أول حيوان أليف لك؟', en: 'What was your first pet\'s name?' },
+      { id: 'birthcity', ar: 'في أي مدينة وُلدت؟', en: 'In which city were you born?' },
+      { id: 'friend', ar: 'ما اسم صديق طفولتك المقرب؟', en: 'What is your childhood best friend\'s name?' },
+      { id: 'fatherjob', ar: 'ما مهنة والدك؟', en: 'What is your father\'s profession?' },
+      { id: 'teacher', ar: 'ما اسم أول معلم تتذكره؟', en: 'What is the first teacher you remember?' },
+    ];
+    const normAnswer = (a) => String(a || '').trim().toLowerCase();
+    function verifySecurityAnswers(user, answers) {
+      const stored = user.securityQuestions || [];
+      if (!stored.length || !Array.isArray(answers)) return false;
+      return stored.every((sq) => {
+        const given = (answers || []).find((x) => x.id === sq.id);
+        return given && verifyPassword(normAnswer(given.answer), sq.aHash);
+      });
+    }
+    function checkPin(user, pin, res) {
+      // No PIN set yet: transfers proceed as before (the app nudges the user
+      // to set a PIN from the Security Centre). Once set, it is enforced.
+      if (!user.pinHash) return true;
+      if (user.pinLockedUntil && Date.now() < user.pinLockedUntil) { sendJson(res, 403, { ok: false, error: 'pin_locked' }); return false; }
+      if (!pin) { sendJson(res, 400, { ok: false, error: 'pin_required' }); return false; }
+      if (!verifyPassword(String(pin), user.pinHash)) {
+        user.pinFailCount = (user.pinFailCount || 0) + 1;
+        if (user.pinFailCount >= 5) { user.pinLockedUntil = Date.now() + 5 * 60 * 1000; user.pinFailCount = 0; }
+        save();
+        sendJson(res, 400, { ok: false, error: 'pin_incorrect' }); return false;
+      }
+      user.pinFailCount = 0; user.pinLockedUntil = 0;
+      return true;
+    }
+    if (p === '/api/security/questions' && method === 'GET') {
+      const email = String(url.searchParams.get('email') || '').toLowerCase();
+      const u = db().users.find((x) => x.email.toLowerCase() === email && x.status === 'active');
+      if (!u || !(u.securityQuestions || []).length) return sendJson(res, 404, { ok: false, error: 'not_found' });
+      const qs = (u.securityQuestions || []).map((sq) => SECURITY_QUESTIONS.find((q) => q.id === sq.id)).filter(Boolean);
+      return sendJson(res, 200, { ok: true, questions: qs });
+    }
+    if (p === '/api/security/questions' && method === 'POST') {
+      const qs = body.questions || [];
+      if (!Array.isArray(qs) || qs.length !== 2) return sendJson(res, 400, { ok: false, error: 'need_two_questions' });
+      const ids = qs.map((q) => q.id);
+      if (new Set(ids).size !== 2 || !ids.every((id) => SECURITY_QUESTIONS.some((q) => q.id === id))) return sendJson(res, 400, { ok: false, error: 'bad_question' });
+      if (!qs.every((q) => normAnswer(q.answer).length >= 2)) return sendJson(res, 400, { ok: false, error: 'answer_too_short' });
+      me.securityQuestions = qs.map((q) => ({ id: q.id, aHash: hashPassword(normAnswer(q.answer)) }));
+      save();
+      return sendJson(res, 200, { ok: true, count: 2, user: publicUser(me) });
+    }
+    if (p === '/api/security/reset' && method === 'POST') {
+      const email = String(body.email || '').toLowerCase();
+      const u = db().users.find((x) => x.email.toLowerCase() === email);
+      if (!u || u.status === 'banned' || !(u.securityQuestions || []).length) return sendJson(res, 400, { ok: false, error: 'reset_failed' });
+      if (!verifySecurityAnswers(u, body.answers)) return sendJson(res, 400, { ok: false, error: 'reset_failed' });
+      const newPassword = String(body.newPassword || '');
+      const newPin = String(body.newPin || '');
+      if (!newPassword && !newPin) return sendJson(res, 400, { ok: false, error: 'nothing_to_reset' });
+      if (newPassword && newPassword.length < 4) return sendJson(res, 400, { ok: false, error: 'password_too_short' });
+      if (newPin && !/^\d{4}$/.test(newPin)) return sendJson(res, 400, { ok: false, error: 'bad_pin' });
+      if (newPassword) u.passwordHash = hashPassword(newPassword);
+      if (newPin) { u.pinHash = hashPassword(newPin); u.pinFailCount = 0; u.pinLockedUntil = 0; }
+      // A reset by questions logs the account out everywhere.
+      db().sessions = db().sessions.filter((s) => s.userId !== u.id);
+      save();
+      return sendJson(res, 200, { ok: true, passwordReset: !!newPassword, pinReset: !!newPin });
+    }
+    if (p === '/api/security/pin/set' && method === 'POST') {
+      if (me.pinHash) return sendJson(res, 400, { ok: false, error: 'pin_exists' });
+      if (!/^\d{4}$/.test(String(body.pin || ''))) return sendJson(res, 400, { ok: false, error: 'bad_pin' });
+      if (!verifyPassword(String(body.password || ''), me.passwordHash)) return sendJson(res, 400, { ok: false, error: 'bad_password' });
+      me.pinHash = hashPassword(String(body.pin)); me.pinFailCount = 0; me.pinLockedUntil = 0;
+      save();
+      return sendJson(res, 200, { ok: true, user: publicUser(me) });
+    }
+    if (p === '/api/security/pin/change' && method === 'POST') {
+      if (!me.pinHash) return sendJson(res, 400, { ok: false, error: 'no_pin' });
+      if (!/^\d{4}$/.test(String(body.newPin || ''))) return sendJson(res, 400, { ok: false, error: 'bad_pin' });
+      const byPin = body.currentPin && verifyPassword(String(body.currentPin), me.pinHash);
+      const byPassword = body.password && verifyPassword(String(body.password), me.passwordHash);
+      if (!byPin && !byPassword) return sendJson(res, 400, { ok: false, error: 'bad_proof' });
+      me.pinHash = hashPassword(String(body.newPin)); me.pinFailCount = 0; me.pinLockedUntil = 0;
+      save();
+      return sendJson(res, 200, { ok: true, user: publicUser(me) });
     }
     if (p === '/api/lookup' && method === 'POST') {
       const u = findBySdg(String(body.account)) || findByFx(String(body.account));
@@ -392,6 +483,7 @@ async function handle(req, res) {
       const to = findByFx(String(body.toFxAccount));
       const usdCents = Math.floor(Number(body.amountUsd) * 100);
       if (!to || to.id === me.id || to.status === 'banned' || !(usdCents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
+      if (!checkPin(me, body.pin, res)) return;
       if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
       if (me.fxBalanceCents < usdCents) return sendJson(res, 400, { ok: false, error: 'insufficient_fx' });
       const ref = dbmod.refFor(db().nextTxSeq);
@@ -467,6 +559,7 @@ async function handle(req, res) {
       if (to.status !== 'active') return sendJson(res, 400, { ok: false, error: 'card_not_active' });
       if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
       if ((db().users.find((u) => u.id === to.userId) || {}).status === 'banned') return sendJson(res, 400, { ok: false, error: 'bad_card' });
+      if (!checkPin(me, body.pin, res)) return;
       if (from.balanceCents < cents) return sendJson(res, 400, { ok: false, error: 'insufficient_card' });
       const ref = dbmod.refFor(db().nextTxSeq);
       from.balanceCents -= cents; to.balanceCents += cents;
