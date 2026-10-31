@@ -211,7 +211,7 @@ function loginView(){
   return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
   <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
   <div class="auth-card"><h2>${t('login')}</h2>
-  <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="li-email" type="email" placeholder="name@example.com"></div>
+  <label>${lang === 'en' ? 'Email or account number' : 'البريد الإلكتروني أو رقم الحساب'}</label><div class="input-wrap">${IC.mail}<input id="li-email" type="text" placeholder="${lang === 'en' ? 'name@example.com or 1002' : 'name@example.com أو 1002'}"></div>
   <label>${t('password')}</label><div class="input-wrap">${IC.lock}<input id="li-pass" type="password"><button type="button" class="eye-btn" onclick="const e=document.getElementById('li-pass');e.type=e.type==='password'?'text':'password';">${IC.eye}</button></div>
   <button class="btn" onclick="doLogin()">${t('login')}</button>
   <div class="divider-or">${lang === 'en' ? 'or' : 'أو'}</div>
@@ -324,6 +324,7 @@ function statementView(){
     <div class="summary-card"><b>${txs.length}</b><span>${t('opsCount')}</span></div>
   </div>
   <button type="button" class="btn-outline" onclick="downloadStatementText()">${t('downloadText')}</button>
+  <button type="button" class="btn" onclick="downloadStatementPdf()">${lang === 'en' ? 'Download statement as PDF' : 'تنزيل الكشف PDF'}</button>
   <div class="card">${rows}</div>`;
 }
 function downloadStatementText(){
@@ -332,6 +333,79 @@ function downloadStatementText(){
   const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wassil-statement.txt'; a.click();
   toast(lang === 'en' ? 'Statement downloaded' : 'تم تنزيل الكشف');
+}
+async function downloadStatementPdf(){
+  try {
+    const txs = dash?.transactions || [];
+    const W = 800, ROWH = 46, PER = 16, HEAD = 170, FOOT = 56;
+    const pages = [];
+    for (let i = 0; i < Math.max(1, Math.ceil(txs.length / PER)); i++) pages.push(txs.slice(i * PER, (i + 1) * PER));
+    const jpegs = [];
+    for (let pi = 0; pi < pages.length; pi++) {
+      const rows = pages[pi];
+      const H = HEAD + rows.length * ROWH + FOOT;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const c = cv.getContext('2d');
+      c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
+      c.fillStyle = '#0d7a5f'; c.fillRect(0, 0, W, 110);
+      c.fillStyle = '#ffffff'; c.font = 'bold 30px sans-serif'; c.textAlign = 'start';
+      c.fillText(lang === 'en' ? 'Wassil' : 'وصل', 28, 48);
+      c.font = '16px sans-serif'; c.fillText(lang === 'en' ? 'Account statement (demo)' : 'كشف حساب (تجريبي)', 28, 78);
+      c.textAlign = 'end'; c.fillStyle = '#ffd166'; c.font = 'bold 16px sans-serif'; c.fillText('تجريبي', W - 28, 48);
+      c.fillStyle = '#ffffff'; c.font = '14px sans-serif'; c.fillText(new Date().toLocaleDateString(), W - 28, 78);
+      c.fillStyle = '#222222'; c.font = '16px sans-serif'; c.textAlign = 'start';
+      c.fillText((lang === 'en' ? 'Account: ' : 'الحساب: ') + (me?.sdgAccount || ''), 28, 140);
+      c.fillText((lang === 'en' ? 'Name: ' : 'الاسم: ') + nameOf(me), 28, 164);
+      rows.forEach((tx, ri) => {
+        const y = HEAD + ri * ROWH;
+        if (ri % 2 === 0) { c.fillStyle = '#f4f7f6'; c.fillRect(0, y, W, ROWH); }
+        c.fillStyle = '#222222'; c.font = '15px sans-serif'; c.textAlign = 'start';
+        c.fillText(txTitle(tx), 28, y + 20);
+        c.font = '13px sans-serif'; c.fillStyle = '#666666';
+        c.fillText(new Date(tx.createdAt).toLocaleString() + '  |  ' + (tx.ref || ''), 28, y + 38);
+        c.fillStyle = '#222222'; c.font = 'bold 15px sans-serif'; c.textAlign = 'end';
+        c.fillText(txAmount(tx), W - 28, y + 28);
+      });
+      c.fillStyle = '#666666'; c.font = '13px sans-serif'; c.textAlign = 'center';
+      c.fillText(lang === 'en' ? 'Demo only — not real money. / تجريبي فقط — ليس أموالاً حقيقية.' : 'تجريبي فقط — ليس أموالاً حقيقية.', W / 2, H - 30);
+      c.fillText((lang === 'en' ? 'Page ' : 'صفحة ') + (pi + 1) + ' / ' + pages.length, W / 2, H - 10);
+      const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.9));
+      jpegs.push(new Uint8Array(await blob.arrayBuffer()));
+    }
+    // Minimal PDF: one page per JPEG image (DCTDecode), no external library.
+    const enc = new TextEncoder();
+    const chunks = []; let off = 0;
+    const push = (b) => { chunks.push(b); off += b.length; };
+    const pushStr = (s) => push(enc.encode(s));
+    const offsets = [0];
+    pushStr('%PDF-1.4\n');
+    const n = pages.length;
+    const pageObj = (i) => 3 + i * 3, imgObj = (i) => 4 + i * 3, contObj = (i) => 5 + i * 3;
+    const totalObjs = 2 + n * 3;
+    const obj = (id, body) => { offsets[id] = off; pushStr(id + ' 0 obj\n' + body + '\nendobj\n'); };
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [' + pages.map((_, i) => pageObj(i) + ' 0 R').join(' ') + '] /Count ' + n + ' >>');
+    for (let i = 0; i < n; i++) {
+      const H = HEAD + pages[i].length * ROWH + FOOT;
+      const ph = Math.round(595 * H / W);
+      obj(pageObj(i), '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 ' + ph + '] /Resources << /XObject << /Im' + i + ' ' + imgObj(i) + ' 0 R >> >> /Contents ' + contObj(i) + ' 0 R >>');
+      offsets[imgObj(i)] = off;
+      pushStr(imgObj(i) + ' 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + W + ' /Height ' + H + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpegs[i].length + ' >>\nstream\n');
+      push(jpegs[i]); pushStr('\nendstream\nendobj\n');
+      const content = 'q 595 0 0 ' + ph + ' 0 0 cm /Im' + i + ' Do Q';
+      obj(contObj(i), '<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream');
+    }
+    const xrefAt = off;
+    let xref = 'xref\n0 ' + (totalObjs + 1) + '\n0000000000 65535 f \n';
+    for (let id = 1; id <= totalObjs; id++) xref += String(offsets[id]).padStart(10, '0') + ' 00000 n \n';
+    pushStr(xref + 'trailer\n<< /Size ' + (totalObjs + 1) + ' /Root 1 0 R >>\nstartxref\n' + xrefAt + '\n%%EOF');
+    const blob = new Blob(chunks, { type: 'application/pdf' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'wassil-statement-' + String(me?.sdgAccount || 'account').replace(/[\s-]/g, '') + '.pdf'; a.click();
+    toast(lang === 'en' ? 'Statement PDF downloaded' : 'تم تنزيل الكشف PDF');
+  } catch (e) {
+    toast(lang === 'en' ? 'PDF failed, try the text download' : 'تعذر إنشاء PDF، جرب تنزيل النص');
+  }
 }
 function qrView(){
   if (!me) return `${backLink(t('login'), 'login')}
@@ -373,7 +447,7 @@ function transferView(){
   <div class="card">
   <label>${t('beneficiary')}</label>
   <select id="tr-user-select" onchange="onTransferUserChange(this.value)"><option value="">${t('chooseUser')}</option>${opts}<option value="__other__">${t('otherAccount')}</option></select>
-  <label>${t('toAccount')}</label><input id="tr-to" placeholder="1001 0000 0002">
+  <label>${t('toAccount')}</label><input id="tr-to" placeholder="1002">
   <label>${t('amountSdg')}</label><input id="tr-amt" type="number" min="1" value="0">
   <label>${t('noteOptional')}</label><input id="tr-note" placeholder="${lang === 'en' ? 'Example: monthly expenses' : 'مثال: مصاريف الشهر'}">
   <div id="tr-name" class="muted"></div><button class="btn secondary" onclick="lookupAcc()">Check / تحقق</button>
@@ -585,11 +659,14 @@ function adminCardsHtml(u){
     return '<div class="row"><span>' + esc(c.masked || '') + ' — ' + st + ' — ' + moneyUsd(c.balanceCents) + '</span><span><button class="btn secondary" style="width:auto;padding:8px 12px;min-height:0" onclick="adminCardFreeze(' + c.id + ')">' + (lang === 'en' ? 'Stop card' : 'إيقاف البطاقة') + '</button> <button class="btn secondary" style="width:auto;padding:8px 12px;min-height:0" onclick="adminCardUnfreeze(' + c.id + ')">' + (lang === 'en' ? 'Restart card' : 'إعادة تشغيل البطاقة') + '</button></span></div>';
   }).join('') + '</div>';
 }
+let adminSearch = '';
+function normAcctJs(s){ return String(s || '').replace(/[\s-]/g, ''); }
 function adminView(){
   const all = dash?.allUsers || [];
   const active = (dash?.directory || []);
   const opts = active.map(u => `<option value="${u.id}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
-  const users = all.map(u =>
+  const shown = adminSearch ? all.filter(u => normAcctJs(u.sdgAccount) === normAcctJs(adminSearch) || normAcctJs(u.fxAccount) === normAcctJs(adminSearch) || String(u.email || '').toLowerCase().includes(String(adminSearch).toLowerCase())) : all;
+  const users = shown.map(u =>
     `<div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc((nameOf(u) || 'و').trim().charAt(0) || 'و')}</div><div><div class="profile-name">${esc(nameOf(u))}</div><div class="profile-role" style="direction:ltr;text-align:start">${esc(u.email)}</div></div><span class="pill-active">${u.status === 'banned' ? (lang === 'en' ? 'Banned' : 'محظور') : (u.status === 'active' ? t('active') : esc(u.status || ''))}</span></div>
     <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(u.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(u.sdgBalance)}</span></div>
     <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(u.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(u.fxBalanceCents)}</span></div>
@@ -600,18 +677,26 @@ function adminView(){
   const txRows = (dash?.allTransactions || []).map(opRow).join('') || `<p class="muted">—</p>`;
   return `${backLink(t('backHome'), 'home')}
   <div class="page-title">${t('admin')}</div><p class="page-sub">${lang === 'en' ? 'Demo admin account from Wassil — fund user accounts and review their operations.' : 'حساب إداري تجريبي من وصل — موّل حسابات المستخدمين وراجع عملياتهم.'}</p>
+  <div class="card"><h2>${lang === 'en' ? '1 — Find an account' : '١ — ابحث عن حساب'}</h2>
+  <label>${lang === 'en' ? 'Account number (4 digits) or email' : 'رقم الحساب (٤ أرقام) أو البريد الإلكتروني'}</label>
+  <input id="ad-search" inputmode="numeric" placeholder="1002" value="${esc(adminSearch)}">
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" style="width:auto" onclick="adminSearch = document.getElementById('ad-search').value.trim(); go('admin');">${lang === 'en' ? 'Search' : 'بحث'}</button><button class="btn secondary" style="width:auto" onclick="adminSearch = ''; go('admin');">${lang === 'en' ? 'Show all' : 'عرض الكل'}</button></div>
+  <p class="muted">${adminSearch ? (shown.length ? (lang === 'en' ? 'Showing the matching account below — fund, freeze, ban and card actions are on its card.' : 'الحساب المطابق ظاهر تحت — التمويل والتجميد والحظر وأزرار البطاقة على بطاقته.') : (lang === 'en' ? 'No account with this number.' : 'لا يوجد حساب بهذا الرقم.')) : (lang === 'en' ? 'Type an account number to jump straight to that account.' : 'اكتب رقم الحساب عشان توصل للحساب مباشرة.')}</p></div>
+  <div class="page-title" style="margin-top:18px">${lang === 'en' ? '2 — Funding' : '٢ — التمويل'}</div>
   <div class="card"><h2>${lang === 'en' ? 'Fund a user account' : 'تمويل حساب مستخدم'}</h2>
   <label>${lang === 'en' ? 'Activated user account' : 'حساب المستخدم'}</label>
   <select id="ad-user"><option value="">${lang === 'en' ? '— Pick an activated user —' : '— اختر مستخدماً مفعلاً —'}</option>${opts}</select>
+  <label>${lang === 'en' ? 'Or account number' : 'أو رقم الحساب'}</label><input id="ad-num" inputmode="numeric" placeholder="1002">
   <label>${t('amount')} (SDG)</label><input id="ad-amt" type="number" min="1">
   <button class="btn" onclick="adminFund()">${lang === 'en' ? 'Fund now' : 'تمويل الآن'}</button><div id="ad-err" class="err"></div></div>
   <div class="card"><h2>${lang === 'en' ? 'Fund in USD' : 'تمويل بالدولار'}</h2><p class="muted">${lang === 'en' ? 'Unlimited — not deducted from the admin balance.' : 'بلا حد — لا يخصم من رصيد الأدمن.'}</p>
   <label>${lang === 'en' ? 'Activated user account' : 'حساب المستخدم'}</label>
   <select id="ad-fx-user"><option value="">${lang === 'en' ? '— Pick an activated user —' : '— اختر مستخدماً مفعلاً —'}</option>${opts}</select>
+  <label>${lang === 'en' ? 'Or account number' : 'أو رقم الحساب'}</label><input id="ad-fx-num" inputmode="numeric" placeholder="1002">
   <label>${t('amount')} (USD)</label><input id="ad-fx-amt" type="number" min="0.01" step="0.01">
   <button class="btn" onclick="adminFundFx()">${lang === 'en' ? 'Fund in USD now' : 'تمويل بالدولار الآن'}</button><div id="ad-fx-err" class="err"></div></div>
-  <div class="page-title" style="margin-top:18px">${lang === 'en' ? `All registered accounts (${all.length})` : `كل الحسابات المسجلة (${all.length})`}</div>${users}
-  <div class="page-title" style="margin-top:18px">${lang === 'en' ? 'Transfer and transaction log' : 'سجل التحويل والمعاملات'}</div>
+  <div class="page-title" style="margin-top:18px">${lang === 'en' ? `3 — Accounts (${shown.length} of ${all.length})` : `٣ — الحسابات (${shown.length} من ${all.length})`}</div>${users}
+  <div class="page-title" style="margin-top:18px">${lang === 'en' ? '4 — Transfer and transaction log' : '٤ — سجل التحويل والمعاملات'}</div>
   <div class="card">${txRows}</div>
   <div class="demo-foot">${t('demoNote')}</div>`;
 }
@@ -685,7 +770,7 @@ function render(){
 
 // ---------- actions ----------
 async function doLogin(){
-  try { const j = await api('/api/login', { method:'POST', body: JSON.stringify({ email: $('#li-email').value, password: $('#li-pass').value }) });
+  try { const j = await api('/api/login', { method:'POST', body: JSON.stringify({ identifier: $('#li-email').value, email: $('#li-email').value, password: $('#li-pass').value }) });
     token = j.token; localStorage.setItem('wassil-token', token); await loadDash(); go('home'); }
   catch(e){ $('#li-err').textContent = e.message; }
 }
@@ -789,9 +874,16 @@ async function sellAsset(id){
   const q = prompt('Quantity / الكمية'); if (!q) return;
   try { await api('/api/investments/sell', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message); }
 }
+function adminResolveByNumber(num){
+  const n = normAcctJs(num);
+  const pool = (dash?.allUsers || []).concat(dash?.directory || []);
+  const u = pool.find(x => normAcctJs(x.sdgAccount) === n || normAcctJs(x.fxAccount) === n);
+  return u ? u.id : '';
+}
 async function adminFund(){
-  const target = $('#ad-user') ? $('#ad-user').value : ($('#ad-id') ? $('#ad-id').value : '');
-  if (!target) { $('#ad-err').textContent = lang === 'en' ? 'Pick an activated user' : 'اختر مستخدماً مفعلاً'; return; }
+  let target = $('#ad-user') ? $('#ad-user').value : ($('#ad-id') ? $('#ad-id').value : '');
+  if (!target && $('#ad-num') && $('#ad-num').value.trim()) target = adminResolveByNumber($('#ad-num').value.trim());
+  if (!target) { $('#ad-err').textContent = lang === 'en' ? 'Pick a user or enter an account number' : 'اختر مستخدماً أو اكتب رقم الحساب'; return; }
   try { await api('/api/admin/fund', { method:'POST', body: JSON.stringify({ targetUserId: target, amount: $('#ad-amt').value }) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ $('#ad-err').textContent = e.message; }
 }
 async function adminAction(path, body){
@@ -802,8 +894,9 @@ async function adminFreezeAll(id){ await adminAction('/api/admin/freeze-all', { 
 async function adminUnfreeze(id){ await adminAction('/api/admin/unfreeze', { targetUserId: id }); }
 async function adminBan(id){ await adminAction('/api/admin/ban', { targetUserId: id }); }
 async function adminFundFx(){
-  const target = $('#ad-fx-user') ? $('#ad-fx-user').value : '';
-  if (!target) { const el = $('#ad-fx-err'); if (el) el.textContent = lang === 'en' ? 'Pick an activated user' : 'اختر مستخدماً مفعلاً'; return; }
+  let target = $('#ad-fx-user') ? $('#ad-fx-user').value : '';
+  if (!target && $('#ad-fx-num') && $('#ad-fx-num').value.trim()) target = adminResolveByNumber($('#ad-fx-num').value.trim());
+  if (!target) { const el = $('#ad-fx-err'); if (el) el.textContent = lang === 'en' ? 'Pick a user or enter an account number' : 'اختر مستخدماً أو اكتب رقم الحساب'; return; }
   try { await api('/api/admin/fund-fx', { method:'POST', body: JSON.stringify({ targetUserId: target, amountUsd: $('#ad-fx-amt').value }) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ const el = $('#ad-fx-err'); if (el) el.textContent = e.message; }
 }
 async function adminCardFreeze(cardId){ await adminAction('/api/admin/card-freeze', { cardId }); }

@@ -77,8 +77,9 @@ function addTx(tx) {
 }
 function availableSdg(u) { return dbmod.availableSdg(u); }
 function isFrozenAll(u) { return dbmod.isFrozenAll(u); }
-function findBySdg(acct) { return db().users.find((u) => u.sdgAccount === acct); }
-function findByFx(acct) { return db().users.find((u) => u.fxAccount === acct); }
+const normAcct = dbmod.normAcct;
+function findBySdg(acct) { const n = normAcct(acct); return db().users.find((u) => normAcct(u.sdgAccount) === n); }
+function findByFx(acct) { const n = normAcct(acct); return db().users.find((u) => normAcct(u.fxAccount) === n); }
 function findCardByNumber(num) {
   const clean = String(num).replace(/\s|-/g, '');
   return db().cards.find((c) => c.fullNumber.replace(/\s/g, '') === clean);
@@ -113,7 +114,7 @@ function ensureAdmin() {
     id: seq, email: adminEmail, passwordHash: hashPassword(pw),
     fullNameAr: 'مدير وصل التجريبي العام', fullNameEn: 'Wassil Demo Manager',
     role: 'admin', status: 'active',
-    sdgAccount: dbmod.accountNumber(seq, '1001'), fxAccount: dbmod.accountNumber(seq, '2002'),
+    sdgAccount: dbmod.accountNumber(seq, 1000), fxAccount: dbmod.accountNumber(seq, 2000),
     sdgBalance: 0, fxBalanceCents: 0, frozenSdg: 0, frozenAll: false, createdAt: new Date().toISOString(),
   };
   d.users.push(admin); save();
@@ -174,15 +175,16 @@ async function handle(req, res) {
       if (u.status === 'banned') return sendJson(res, 403, { ok: false, error: 'banned' });
       if (u.status !== 'active') {
         u.status = 'active';
-        u.sdgAccount = dbmod.accountNumber(u.id, '1001');
-        u.fxAccount = dbmod.accountNumber(u.id, '2002');
+        u.sdgAccount = dbmod.accountNumber(u.id, 1000);
+        u.fxAccount = dbmod.accountNumber(u.id, 2000);
         addTx({ userId: u.id, type: 'account_open', titleAr: 'فتح الحساب وتفعيله — مرحباً بك في وصّل', titleEn: 'Account opened and activated — welcome to Wassil', amountSdg: 0, currency: 'SDG', fromName: u.fullNameAr, fromAccount: u.sdgAccount, toName: u.fullNameAr, toAccount: u.sdgAccount });
         save();
       }
       return sendJson(res, 200, { ok: true, user: publicUser(u) });
     }
     if (p === '/api/login' && method === 'POST') {
-      const u = db().users.find((x) => x.email === body.email);
+      const ident = String(body.email || body.identifier || '').trim();
+      const u = db().users.find((x) => x.email.toLowerCase() === ident.toLowerCase() || normAcct(x.sdgAccount) === normAcct(ident) || normAcct(x.fxAccount) === normAcct(ident));
       if (!u || !verifyPassword(body.password || '', u.passwordHash)) return sendJson(res, 401, { ok: false, error: 'bad_login' });
       if (u.status === 'banned') return sendJson(res, 403, { ok: false, error: 'banned' });
       if (u.status !== 'active') return sendJson(res, 403, { ok: false, error: 'not_activated' });
