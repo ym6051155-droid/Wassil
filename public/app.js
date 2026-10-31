@@ -287,7 +287,12 @@ const IC = {
   repeat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>',
   trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
   calc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h2M8 15h2M12 15h2M16 15h2M8 19h2M12 19h2M16 19h2"/></svg>',
+  whatsapp:'<svg viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5.1-1.3A10 10 0 1012 2zm5.2 13.9c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.1.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>',
 };
+const ADMIN_WHATSAPP = '819043493101'; // wa.me digits for the number given as 00819043493101
+const ADMIN_WHATSAPP_DISPLAY = '00819043493101';
+function contactAdminLink(){ return `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(lang === 'en' ? 'Hello, I need help with Wassil.' : 'مرحباً، أحتاج مساعدة في تطبيق وصل.')}`; }
+function contactAdminRow(){ return `<a class="menu-row" style="text-decoration:none;color:inherit" href="${contactAdminLink()}" target="_blank" rel="noopener"><span class="acct-ic">${IC.whatsapp}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${lang === 'en' ? 'Contact management' : 'تواصل مع الإدارة'}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">WhatsApp ${ADMIN_WHATSAPP_DISPLAY}</span></span><span>›</span></a>`; }
 const WAVE = '<svg viewBox="0 0 64 64" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 30c6-7 12-7 18 0s12 7 18 0" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity=".85"/><path d="M10 44c6-7 12-7 18 0s12 7 18 0" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/><circle cx="48" cy="14" r="5" fill="#ffffff"/></svg>';
 function userbar(){
   const n = (dash?.transactions || []).length;
@@ -323,7 +328,8 @@ function loginView(){
   <div class="auth-footer"><div class="auth-links"><button type="button" class="auth-link" onclick="window._policyReturn='login';go('policies')"><span class="auth-link-ic">${IC.policy}</span>${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</button>
   <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.info}</span>${t('about')}</button>
   <button type="button" class="auth-link" onclick="go('branches')"><span class="auth-link-ic">${IC.pin}</span>${t('locations')}</button>
-  <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.headset}</span>${t('support')}</button></div></div></div>`;
+  <button type="button" class="auth-link" onclick="go('faq')"><span class="auth-link-ic">${IC.headset}</span>${t('support')}</button>
+  <a class="auth-link" style="text-decoration:none" href="${contactAdminLink()}" target="_blank" rel="noopener"><span class="auth-link-ic">${IC.whatsapp}</span>${lang === 'en' ? 'Contact management' : 'تواصل مع الإدارة'}</a></div></div></div>`;
 }
 function signupView(){
   const policyAgreed = localStorage.getItem('wassil-policy-agreed') === '1';
@@ -414,7 +420,8 @@ function accountView(){
   <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${t('beneficiaries')}</span></span></div>${ben}</div>
   <div class="profile-card"><button type="button" class="menu-row" onclick="go('statement')"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('notifications')}</span><span class="menu-row-sub">${lang === 'en' ? 'Your operations and updates' : 'عملياتك وتحديثاتك'}</span></span><span>›</span></button>
   <button type="button" class="menu-row" onclick="go('security')"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('security')}</span><span class="menu-row-sub">${lang === 'en' ? 'Fingerprint and password' : 'البصمة وكلمة المرور'}</span></span><span>›</span></button>
-  <button type="button" class="menu-row" onclick="window._policyReturn='account';go('policies')"><span class="acct-ic">${IC.info}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</span></span><span>›</span></button></div>
+  <button type="button" class="menu-row" onclick="window._policyReturn='account';go('policies')"><span class="acct-ic">${IC.info}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${lang === 'en' ? 'Site policy' : 'سياسة الموقع'}</span></span><span>›</span></button>
+  ${contactAdminRow()}</div>
   ${me.role === 'admin' ? `<div class="profile-card" style="border:1.5px solid var(--teal)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'Admin mode active' : 'وضع الأدمن مفعّل'}</div><p class="muted" style="margin:0 0 12px">${lang === 'en' ? 'Fund user accounts and review registrations from the admin dashboard.' : 'مؤّل حسابات المستخدمين وراجع التسجيلات من لوحة الأدمن.'}</p><button class="btn" onclick="go('admin')">${lang === 'en' ? 'Open admin dashboard' : 'فتح لوحة الأدمن'}</button></div>` : ''}
   <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
   `;
