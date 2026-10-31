@@ -386,24 +386,23 @@ function homeView(){
   <div class="card"><div class="ops-head"><h2>${t('latestOps')}</h2><button type="button" class="link-btn" onclick="go('statement')">${t('showAll')}</button></div>${rows}</div>`;
 }
 function servicesView(){
-  const L = (a, e) => lang === 'en' ? e : a;
   const items = [
-    [IC.card, t('cards'), L('رصيد بالدولار فقط، عرض التفاصيل بأيقونة العين ونسخ الرقم، تجميد وحدود', 'USD balance only, eye-icon details and number copy, freeze and limits'), "go('cards')"],
-    [IC.card, t('topup'), L('من الحساب الأجنبي فقط، بالدولار — اشحن الأجنبي من الجنيه بسعر 10,000', 'From the FX account only, in USD — fund FX from SDG at 10,000'), "go('cardTopup')"],
-    [IC.transfer, t('cardTransfer'), L('من بطاقة إلى بطاقة فقط — بالدولار', 'USD transfer between Wassil cards only'), "go('cardTransfer')"],
-    [IC.bank, t('deposits'), L('أرباح سنوية 12%–30% حسب المبلغ والمدة', 'Term deposits from 24h to a year — 12% to 30% by amount'), "go('deposits')"],
-    [IC.trend, t('invest'), L('عملات وذهب وأسهم بأسعار معلنة', 'Currencies, gold and stocks at announced prices'), "go('invest')"],
-    [IC.calc, t('loanCalc'), L('حاسبة أقساط 10%', 'Instalment calculator at 10%'), "go('loan')"],
-    [IC.repeat, t('orders'), L('تحويلات متكررة مجدولة وهمياً', 'Saved recurring transfers that run automatically'), "go('orders')"],
-    [IC.target, t('goals'), L('ادخر نحو هدفك خطوة بخطوة', 'Save towards a goal with a set amount and term'), "go('goals')"],
-    [IC.chart, t('statement'), L('الوارد والصادر وكل العمليات', 'All your operations with reference and date'), "go('statement')"],
-    [IC.shield, t('security'), L('الرمز، أسئلة الأمان، الأجهزة', 'Fingerprint, password and trusted devices'), "go('security')"],
-    [IC.pin, t('branches'), L('قائمة وهمية قابلة للبحث', 'Branch locations and opening hours'), "go('branches')"],
-    [IC.headset, t('faq'), L('أسئلة شائعة ودعم', 'FAQ and support'), "go('faq')"],
+    [IC.card, t('cards'), "go('cards')"],
+    [IC.card, t('topup'), "go('cardTopup')"],
+    [IC.transfer, t('cardTransfer'), "go('cardTransfer')"],
+    [IC.bank, t('deposits'), "go('deposits')"],
+    [IC.trend, t('invest'), "go('invest')"],
+    [IC.calc, t('loanCalc'), "go('loan')"],
+    [IC.repeat, t('orders'), "go('orders')"],
+    [IC.target, t('goals'), "go('goals')"],
+    [IC.chart, t('statement'), "go('statement')"],
+    [IC.shield, t('security'), "go('security')"],
+    [IC.pin, t('branches'), "go('branches')"],
+    [IC.headset, t('faq'), "go('faq')"],
   ];
   return `${backLink(t('backHome'), 'home')}
   <div class="page-title">${t('bankServicesPage')}</div>
-  <div class="svc-grid">${items.map(([ic, ti, de, act]) => `<button type="button" class="svc-card" onclick="${act}"><span class="svc-ic">${ic}</span><span class="svc-title" style="display:block">${ti}</span><span class="svc-desc" style="display:block">${de}</span></button>`).join('')}</div>`;
+  <div class="svc-grid">${items.map(([ic, ti, act]) => `<button type="button" class="svc-card" onclick="${act}"><span class="svc-ic">${ic}</span><span class="svc-title" style="display:block">${ti}</span></button>`).join('')}</div>`;
 }
 function accountView(){
   if (!me) return loginView();
