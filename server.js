@@ -198,12 +198,15 @@ async function handle(req, res) {
             addTx({ userId: u.id, type: 'welcome_bonus', titleAr: 'مكافأة ترحيبية — 15,000 ج.س', titleEn: 'Welcome bonus — 15,000 SDG', amountSdg: 15000, currency: 'SDG', fromName: 'وصل', fromAccount: 'Wassil', toName: u.fullNameAr, toAccount: u.sdgAccount });
           }
         }
-        // Invite bonus: 50,000 SDG for the NEW account that enters a valid
-        // invite code at activation. The code is WSL + the inviter's SDG
-        // account number (e.g. WSL1002), or just the account number itself.
-        // Once per account (activation runs once) and once per device, so one
-        // device cannot farm the bonus with many accounts. The inviter gets
-        // nothing extra — the reward is for writing/using the code.
+        // Invite bonus: 50,000 SDG EACH for the NEW account that enters a
+        // valid invite code at activation AND for the inviter (the code's
+        // owner) — full 50,000 for each side, not split. The code is WSL +
+        // the inviter's SDG account number (e.g. WSL1002), or just the
+        // account number itself. Once per new account (activation runs
+        // once) and once per device, so one device cannot farm the bonus
+        // with many accounts; the inviter earns 50,000 per person who
+        // successfully activates with their code. Each side gets its own
+        // history row so the bonus is visible in both accounts.
         const rawCode = String(u.pendingInviteCode || body.inviteCode || '').trim().toUpperCase();
         if (rawCode) {
           const digits = rawCode.startsWith('WSL') ? rawCode.slice(3) : rawCode;
@@ -215,13 +218,15 @@ async function handle(req, res) {
             if (!d.usedInviteDevices) d.usedInviteDevices = [];
             d.usedInviteDevices.push(devId2);
             u.sdgBalance += 50000;
+            inviter.sdgBalance += 50000;
             inviteBonusGranted = true;
             addTx({ userId: u.id, type: 'invite_bonus', titleAr: 'مكافأة رمز دعوة — 50,000 ج.س', titleEn: 'Invite code bonus — 50,000 SDG', amountSdg: 50000, currency: 'SDG', fromName: inviter.fullNameAr, fromAccount: inviter.sdgAccount, toName: u.fullNameAr, toAccount: u.sdgAccount });
+            addTx({ userId: inviter.id, type: 'invite_reward', titleAr: 'مكافأة دعوة صديق — 50,000 ج.س', titleEn: 'Friend invite reward — 50,000 SDG', amountSdg: 50000, currency: 'SDG', fromName: u.fullNameAr, fromAccount: u.sdgAccount, toName: inviter.fullNameAr, toAccount: inviter.sdgAccount });
           }
         }
         save();
       }
-      return sendJson(res, 200, { ok: true, user: publicUser(u), bonusGranted, bonusSdg: bonusGranted ? 15000 : 0, inviteBonusGranted, inviteInvalid, inviteDeviceClaimed });
+      return sendJson(res, 200, { ok: true, user: publicUser(u), bonusGranted, bonusSdg: bonusGranted ? 15000 : 0, inviteBonusGranted, inviterBonusGranted: inviteBonusGranted, inviteInvalid, inviteDeviceClaimed });
     }
     if (p === '/api/login' && method === 'POST') {
       const ident = String(body.email || body.identifier || '').trim();
