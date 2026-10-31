@@ -426,11 +426,35 @@ function accountView(){
   <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
   `;
 }
+let stmtQ = '', stmtRange = 'all', stmtLast5 = false, stmtTxs = null, stmtTxsLoading = false;
+function stmtBaseTxs(){ return stmtTxs || dash?.transactions || []; }
+function filterStmtTx(txs, q, range, last5){
+  const qq = (q || '').trim().toLowerCase();
+  let list = txs;
+  if (qq) { list = txs.filter(t => String(t.ref || '').toLowerCase().includes(qq)); }
+  else if (range === 'today') { const now = new Date(); list = txs.filter(t => { const d = new Date(t.createdAt); return !isNaN(d) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate(); }); }
+  else if (range === 'week') { const cut = Date.now() - 7 * 24 * 60 * 60 * 1000; list = txs.filter(t => new Date(t.createdAt).getTime() >= cut); }
+  else if (range === 'month') { const cut = Date.now() - 30 * 24 * 60 * 60 * 1000; list = txs.filter(t => new Date(t.createdAt).getTime() >= cut); }
+  if (last5) list = list.slice(0, 5);
+  return list;
+}
+function applyStmtFilter(){
+  const el = document.getElementById('stmtList'); if (!el) return;
+  const list = filterStmtTx(stmtBaseTxs(), stmtQ, stmtRange, stmtLast5);
+  el.innerHTML = list.map(opRow).join('') || `<p class="muted">${lang === 'en' ? 'No matching results' : 'لا توجد نتائج مطابقة'}</p>`;
+  const c = document.getElementById('stmtCount'); if (c) c.textContent = lang === 'en' ? `${list.length} operations` : `${list.length} عملية`;
+  document.querySelectorAll('.flt-btn[data-range]').forEach(b => b.classList.toggle('on', b.dataset.range === stmtRange));
+  const l5 = document.getElementById('stmtLast5Btn'); if (l5) l5.classList.toggle('on', stmtLast5);
+}
+function loadStmtTxs(){ if (stmtTxs || stmtTxsLoading) return; stmtTxsLoading = true; api('/api/transactions').then(d => { stmtTxs = d.transactions || []; stmtTxsLoading = false; if (view === 'statement') render(); }).catch(() => { stmtTxsLoading = false; }); }
 function statementView(){
-  const txs = dash?.transactions || [];
+  loadStmtTxs();
+  const txs = stmtBaseTxs();
   let inSdg = 0, outSdg = 0;
   txs.forEach(tx => { const a = tx.amountSdg || 0; if (a > 0) inSdg += a; if (a < 0) outSdg += -a; });
-  const rows = txs.map(opRow).join('') || `<p class="muted">—</p>`;
+  const list = filterStmtTx(txs, stmtQ, stmtRange, stmtLast5);
+  const rows = list.map(opRow).join('') || `<p class="muted">${lang === 'en' ? 'No matching results' : 'لا توجد نتائج مطابقة'}</p>`;
+  const flt = (r, ar, en) => `<button type="button" class="flt-btn${stmtRange === r ? ' on' : ''}" data-range="${r}" onclick="stmtRange=this.dataset.range;applyStmtFilter()">${lang === 'en' ? en : ar}</button>`;
   return `${backLink(t('backHome'), 'home')}
   <div class="page-title">${t('statement')}</div><p class="page-sub">${t('statementSub')}</p>
   <div class="summary-row">
@@ -440,7 +464,12 @@ function statementView(){
   </div>
   <button type="button" class="btn-outline" onclick="downloadStatementText()">${t('downloadText')}</button>
   <button type="button" class="btn" onclick="downloadStatementPdf()">${lang === 'en' ? 'Download statement as PDF' : 'تنزيل الكشف PDF'}</button>
-  <div class="card">${rows}</div>`;
+  <div class="card">
+  <label>${lang === 'en' ? 'Search by reference' : 'بحث بالرقم المرجعي'}</label>
+  <div class="input-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="stmtSearch" type="text" style="direction:ltr;text-align:start" value="${esc(stmtQ)}" placeholder="${lang === 'en' ? 'WSL-XXXX-XXX or part of it' : 'WSL-XXXX-XXX أو جزء منه'}" oninput="stmtQ=this.value;applyStmtFilter()"></div>
+  <div class="flt-row">${flt('all', 'الكل', 'All')}${flt('today', 'اليوم', 'Today')}${flt('week', 'الأسبوع', 'Week')}${flt('month', 'الشهر', 'Month')}<button type="button" id="stmtLast5Btn" class="flt-btn${stmtLast5 ? ' on' : ''}" onclick="stmtLast5=!stmtLast5;applyStmtFilter()">${lang === 'en' ? 'Last 5' : 'آخر 5 معاملات'}</button></div>
+  <p class="muted" id="stmtCount">${lang === 'en' ? `${list.length} operations` : `${list.length} عملية`}</p>
+  <div id="stmtList">${rows}</div></div>`;
 }
 function downloadStatementText(){
   const txs = dash?.transactions || [];

@@ -549,7 +549,7 @@ async function handle(req, res) {
     if (p === '/api/transactions' && method === 'GET') {
       const d = db();
       const list = me.role === 'admin' ? d.transactions : d.transactions.filter((t) => t.userId === me.id);
-      return sendJson(res, 200, { ok: true, transactions: list.slice(-100).reverse() });
+      return sendJson(res, 200, { ok: true, transactions: [...list].reverse() });
     }
     const txMatch = p.match(/^\/api\/transactions\/(\d+)$/);
     if (txMatch && method === 'GET') {
