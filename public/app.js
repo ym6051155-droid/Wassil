@@ -227,7 +227,7 @@ function loginView(){
 function signupView(){
   return `<div class="auth-page"><div class="auth-hero-teal"><div class="auth-hero-top"><button type="button" class="icon-pill lang" id="langBtn" onclick="toggleLang()">${lang === 'en' ? 'عربي' : 'EN'}</button><span class="badge-outline" style="border-color:rgba(255,255,255,.6);color:#fff;background:transparent">تجريبي</span></div>
   <div class="auth-hero-brand" style="margin-top:22px"><div class="auth-logo-sm">${WAVE}</div><div><div class="auth-hero-name">${brandName()}</div><div class="auth-hero-sub">${t('bankServices')}</div></div></div></div>
-  <div class="auth-card"><h2>${t('signup')}</h2>
+  <div class="auth-card">${backLink(t('login'), 'login')}<h2>${t('signup')}</h2>
   <p class="muted">كود التفعيل تجريبي يظهر داخل التطبيق — لم يُرسل أي بريد حقيقي. / Demo activation code is shown in-app — no real email is sent.</p>
   <label>${t('email')}</label><div class="input-wrap">${IC.mail}<input id="su-email" type="email"></div>
   <label>${t('nameAr')}</label><input id="su-ar">
@@ -321,25 +321,30 @@ function downloadStatementText(){
   toast(lang === 'en' ? 'Statement downloaded' : 'تم تنزيل الكشف');
 }
 function qrView(){
-  if (!me) return loginView();
+  if (!me) return `${backLink(t('login'), 'login')}
+  <div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-grid">${qrCells('wassil-demo')}</div>
+  <div style="font-weight:900;font-size:17px">${brandName()}</div>
+  <p class="muted">${t('qrNote')}</p>
+  <p class="muted">${t('demoNote')}</p>
+  <button class="btn secondary" onclick="go('login')">${t('login')}</button></div>`;
   const cells = qrCells((me.sdgAccount || '') + nameOf(me));
-  return `<div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-grid">${cells}</div>
+  return `${backLink(t('backHome'), 'home')}
+  <div class="page-title">${t('qrShare')}</div><div class="card" style="text-align:center"><div class="qr-grid">${cells}</div>
   <div style="font-weight:900;font-size:17px">${esc(nameOf(me))}</div>
   <div class="muted" style="direction:ltr">${esc(me.sdgAccount || '')}</div>
   <p class="muted">${t('qrNote')}</p>
-  <button class="btn secondary" onclick="copyAccount()">${lang === 'en' ? 'Copy account number' : 'نسخ رقم الحساب'}</button>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  <button class="btn secondary" onclick="copyAccount()">${lang === 'en' ? 'Copy account number' : 'نسخ رقم الحساب'}</button></div>`;
 }
 async function copyAccount(){
   try { await navigator.clipboard.writeText(me.sdgAccount || ''); } catch { const ta = document.createElement('textarea'); ta.value = me.sdgAccount || ''; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
   toast(lang === 'en' ? 'Account number copied' : 'تم نسخ رقم الحساب');
 }
 function loanView(){
-  return `<div class="page-title">${t('loanCalc')}</div><p class="page-sub">${lang === 'en' ? 'Demo instalment calculator at 10% per year — demo only, not real financing.' : 'حاسبة أقساط افتراضية بنسبة 10% سنوياً — تجريبي فقط، ليس تمويلاً حقيقياً.'}</p><div class="card">
+  return `${backLink(t('backServices'), 'services')}
+  <div class="page-title">${t('loanCalc')}</div><p class="page-sub">${lang === 'en' ? 'Demo instalment calculator at 10% per year — demo only, not real financing.' : 'حاسبة أقساط افتراضية بنسبة 10% سنوياً — تجريبي فقط، ليس تمويلاً حقيقياً.'}</p><div class="card">
   <label>${t('amount')} (SDG)</label><input id="loan-amt" type="number" min="1">
   <label>${lang === 'en' ? 'Months' : 'عدد الأشهر'}</label><input id="loan-months" type="number" min="1" value="12">
-  <button class="btn" onclick="calcLoan()">${t('confirm')}</button><div id="loan-out" class="ok"></div>
-  <button class="btn secondary" onclick="go('services')">${t('back')}</button></div>`;
+  <button class="btn" onclick="calcLoan()">${t('confirm')}</button><div id="loan-out" class="ok"></div></div>`;
 }
 function calcLoan(){
   const p = parseFloat($('#loan-amt').value || 0); const m = parseFloat($('#loan-months').value || 0);
@@ -523,9 +528,10 @@ async function loadDeposits(){
 }
 function investView(){
   return `${backLink(t('backServices'), 'services')}
-  <div class="card"><h2>${t('invest')} — <span class="badge">تجريبي</span></h2><p class="muted">Demo only — fake announced prices, no real trading or real money.</p>
+  <div class="page-title">${t('invest')}</div><p class="page-sub">${lang === 'en' ? 'Demo currencies, gold and stocks at announced fake prices.' : 'عملات وذهب وأسهم تجريبية بأسعار وهمية معلنة.'}</p>
+  <div class="card"><h2>${t('invest')} — <span class="badge">تجريبي</span></h2><p class="muted">Demo only — fake announced prices, no real trading or real money. / تجريبي فقط — أسعار وهمية معلنة، لا تداول حقيقي ولا أموال حقيقية.</p>
   <div id="inv-assets"></div><div id="inv-port"></div><div id="inv-err" class="err"></div>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  <button class="btn secondary" onclick="go('services')">${t('backServices')}</button></div>`;
 }
 function receiptView(){
   const tx = selTx; if (!tx) return homeView();
@@ -561,22 +567,29 @@ function receiptView(){
 function adminView(){
   const users = (dash?.allUsers || []).map(u =>
     `<div class="row"><span>${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</span><span>${moneySdg(u.sdgBalance)}</span></div>`).join('');
-  return `<div class="card"><h2>${t('admin')}</h2>${users}
+  return `${backLink(t('backHome'), 'home')}
+  <div class="page-title">${t('admin')}</div><p class="page-sub">${lang === 'en' ? 'Fund demo user accounts.' : 'تمويل حسابات المستخدمين التجريبية.'}</p>
+  <div class="card"><h2>${t('admin')}</h2>${users}
   <label>User ID / رقم المستخدم</label><input id="ad-id" type="number">
   <label>${t('amount')} (SDG)</label><input id="ad-amt" type="number" min="1">
-  <button class="btn" onclick="adminFund()">Fund / تمويل</button><div id="ad-err" class="err"></div>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  <button class="btn" onclick="adminFund()">Fund / تمويل</button><div id="ad-err" class="err"></div></div>`;
 }
 function securityView(){
   return `${backLink(t('backServices'), 'services')}
+  <div class="page-title">${t('security')}</div><p class="page-sub">${lang === 'en' ? 'Fingerprint, password and trusted devices.' : 'الرمز، أسئلة الأمان، الأجهزة.'}</p>
   <div class="card"><h2>${t('security')}</h2>
-  <p class="muted">Fingerprint key is bound to this account and this device only. The fingerprint image is never stored and never leaves the device.</p>
+  <p class="muted">${lang === 'en' ? 'Fingerprint key is bound to this account and this device only. The fingerprint image is never stored and never leaves the device.' : 'مفتاح البصمة مربوط بهذا الحساب وهذا الجهاز فقط. صورة البصمة لا تُحفظ أبداً ولا تغادر الجهاز.'}</p>
   <button class="btn" onclick="enableFp()">${t('enableFingerprint')}</button>
   <button class="btn secondary" onclick="disableFp()">${t('disableFingerprint')}</button><div id="sec-err" class="err"></div><div id="sec-ok" class="ok"></div>
-  <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+  <button class="btn secondary" onclick="go('services')">${t('backServices')}</button></div>`;
 }
-function simpleView(title, body){
-  return `<div class="card"><h2>${esc(title)}</h2>${body}<button class="btn secondary" onclick="go('home')">${t('back')}</button></div>`;
+function simpleView(title, body, backView, subtitle){
+  const bv = backView || 'home';
+  const bl = bv === 'services' ? t('backServices') : (bv === 'login' ? t('login') : t('backHome'));
+  return `${backLink(bl, bv)}
+  <div class="page-title">${esc(title)}</div>${subtitle ? `<p class="page-sub">${subtitle}</p>` : ''}
+  <div class="card">${body}</div>
+  <div class="demo-foot">${t('demoNote')}</div>`;
 }
 function render(){
   document.documentElement.lang = lang; document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
@@ -599,11 +612,11 @@ function render(){
   else if (view === 'loan') html = loanView();
   else if (view === 'cardTopup') html = cardTopupView();
   else if (view === 'cardTransfer') html = cardTransferView();
-  else if (view === 'bills') html = simpleView(t('bills'), `<div id="bills-list"></div>`);
-  else if (view === 'goals') html = simpleView(t('goals'), `<label>Name / الاسم</label><input id="goal-name"><label>Target (SDG)</label><input id="goal-tgt" type="number"><button class="btn" onclick="addGoal()">${t('send')}</button><div id="goals-list"></div>`);
-  else if (view === 'orders') html = simpleView(t('orders'), `<label>${t('toAccount')}</label><input id="ord-to"><label>${t('amount')} (SDG)</label><input id="ord-amt" type="number"><button class="btn" onclick="addOrder()">${t('send')}</button><div id="orders-list"></div>`);
-  else if (view === 'branches') html = simpleView(t('branches'), `<div id="branches-list"></div>`);
-  else if (view === 'faq') html = simpleView(t('faq'), `<p>Demo only — this is not real bank support. / تجريبي فقط — ليس دعماً بنكياً حقيقياً.</p><p>Q: Is this real money? / هل هذه أموال حقيقية؟<br>A: No — all balances and prices are fake demo data. / لا — كل الأرصدة والأسعار بيانات تجريبية وهمية.</p>`);
+  else if (view === 'bills') html = simpleView(t('bills'), `<div id="bills-list"></div>`, 'home', lang === 'en' ? 'Pay your demo bills from your balance.' : 'ادفع فواتيرك التجريبية من رصيدك.');
+  else if (view === 'goals') html = simpleView(t('goals'), `<label>Name / الاسم</label><input id="goal-name"><label>Target (SDG)</label><input id="goal-tgt" type="number"><button class="btn" onclick="addGoal()">${t('send')}</button><div id="goals-list"></div>`, 'services', lang === 'en' ? 'Save towards a goal with a set amount and term.' : 'ادخر نحو هدفك خطوة بخطوة.');
+  else if (view === 'orders') html = simpleView(t('orders'), `<label>${t('toAccount')}</label><input id="ord-to"><label>${t('amount')} (SDG)</label><input id="ord-amt" type="number"><button class="btn" onclick="addOrder()">${t('send')}</button><div id="orders-list"></div>`, 'services', lang === 'en' ? 'Saved recurring demo transfers.' : 'تحويلات متكررة مجدولة وهمياً.');
+  else if (view === 'branches') html = simpleView(t('branches'), `<div id="branches-list"></div>`, 'home', lang === 'en' ? 'Demo branch list.' : 'قائمة وهمية قابلة للبحث.');
+  else if (view === 'faq') html = simpleView(t('faq'), `<p>Demo only — this is not real bank support. / تجريبي فقط — ليس دعماً بنكياً حقيقياً.</p><p>Q: Is this real money? / هل هذه أموال حقيقية؟<br>A: No — all balances and prices are fake demo data. / لا — كل الأرصدة والأسعار بيانات تجريبية وهمية.</p>`, 'home', lang === 'en' ? 'FAQ about the demo model.' : 'أسئلة شائعة عن النموذج التجريبي.');
   else html = homeView();
   const logged = !!me && view !== 'login' && view !== 'signup';
   if (logged) html = userbar() + html;
@@ -614,6 +627,8 @@ function render(){
     document.body.classList.toggle('nav-on', logged);
     const activeFor = { home: 'home', transfer: 'transfer', bills: 'bills', services: 'services', account: 'account' }[view];
     document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === activeFor));
+    const navLabels = { home: lang === 'en' ? 'Home' : 'الرئيسية', transfer: lang === 'en' ? 'Transfer' : 'تحويل', bills: lang === 'en' ? 'Bills' : 'فواتير', services: lang === 'en' ? 'Services' : 'الخدمات', account: lang === 'en' ? 'My account' : 'حسابي' };
+    document.querySelectorAll('[data-nav]').forEach(b => { const sp = b.querySelector('span'); if (sp && navLabels[b.dataset.nav]) sp.textContent = navLabels[b.dataset.nav]; });
   }
   if (view === 'invest') loadInvest();
   if (view === 'deposits') loadDeposits();
