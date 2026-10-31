@@ -13,6 +13,8 @@ const wa = require('./lib/webauthn');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const USD_RATE = 10000; // 1 USD = 10,000 SDG (demo rate, change here to change it everywhere server-side)
 const CARD_PRICE_SDG = 100000;
+const TRANSFER_FEE_SDG = 300; // charged to the sender on every SDG transfer, on top of the amount
+const TRANSFER_FEE_USD_CENTS = 50; // 0.50 USD, charged to the sender on every USD transfer (FX or card), on top of the amount
 const MAX_ACTIVE_CARDS = 5;
 
 const ASSETS = [
@@ -366,13 +368,14 @@ async function handle(req, res) {
       if (!to || to.id === me.id || to.status === 'banned' || !(amount > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
       if (!checkPin(me, body.pin, res)) return;
       if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
-      if (availableSdg(me) < amount) return sendJson(res, 400, { ok: false, error: 'insufficient' });
+      if (availableSdg(me) < amount + TRANSFER_FEE_SDG) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       const ref = dbmod.refFor(db().nextTxSeq);
-      me.sdgBalance -= amount; to.sdgBalance += amount;
+      me.sdgBalance -= (amount + TRANSFER_FEE_SDG); to.sdgBalance += amount;
       addTx({ userId: me.id, type: 'transfer_out', titleAr: 'تحويل إلى ' + to.fullNameAr, titleEn: 'Transfer to ' + (to.fullNameEn || to.fullNameAr), amountSdg: -amount, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: to.fullNameAr, toAccount: to.sdgAccount, ref });
+      addTx({ userId: me.id, type: 'transfer_fee', titleAr: 'رسوم تحويل — ' + TRANSFER_FEE_SDG + ' ج.س', titleEn: 'Transfer fee — ' + TRANSFER_FEE_SDG + ' SDG', amountSdg: -TRANSFER_FEE_SDG, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: me.fullNameAr, toAccount: me.sdgAccount, ref });
       addTx({ userId: to.id, type: 'transfer_in', titleAr: 'تحويل وارد من ' + me.fullNameAr, titleEn: 'Incoming transfer from ' + (me.fullNameEn || me.fullNameAr), amountSdg: amount, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: to.fullNameAr, toAccount: to.sdgAccount, ref });
       save();
-      return sendJson(res, 200, { ok: true, ref, user: publicUser(me), suggestBeneficiary: suggestBeneficiary(me, to) });
+      return sendJson(res, 200, { ok: true, ref, user: publicUser(me), feeSdg: TRANSFER_FEE_SDG, suggestBeneficiary: suggestBeneficiary(me, to) });
     }
     // ---- security questions + 4-digit transfer PIN ----
     // Answers are stored only as salted hashes (same scrypt scheme as
@@ -534,13 +537,14 @@ async function handle(req, res) {
       if (!to || to.id === me.id || to.status === 'banned' || !(usdCents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
       if (!checkPin(me, body.pin, res)) return;
       if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
-      if (me.fxBalanceCents < usdCents) return sendJson(res, 400, { ok: false, error: 'insufficient_fx' });
+      if (me.fxBalanceCents < usdCents + TRANSFER_FEE_USD_CENTS) return sendJson(res, 400, { ok: false, error: 'insufficient_fx' });
       const ref = dbmod.refFor(db().nextTxSeq);
-      me.fxBalanceCents -= usdCents; to.fxBalanceCents += usdCents;
+      me.fxBalanceCents -= (usdCents + TRANSFER_FEE_USD_CENTS); to.fxBalanceCents += usdCents;
       addTx({ userId: me.id, type: 'fx_transfer_out', titleAr: 'تحويل أجنبي إلى ' + to.fullNameAr, titleEn: 'FX transfer to ' + (to.fullNameEn || to.fullNameAr), amountUsdCents: -usdCents, currency: 'USD', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: to.fullNameAr, toAccount: to.fxAccount, ref });
+      addTx({ userId: me.id, type: 'fx_transfer_fee', titleAr: 'رسوم تحويل أجنبي — 0.50 USD', titleEn: 'FX transfer fee — 0.50 USD', amountUsdCents: -TRANSFER_FEE_USD_CENTS, currency: 'USD', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: me.fullNameAr, toAccount: me.fxAccount, ref });
       addTx({ userId: to.id, type: 'fx_transfer_in', titleAr: 'تحويل أجنبي وارد من ' + me.fullNameAr, titleEn: 'Incoming FX transfer from ' + (me.fullNameEn || me.fullNameAr), amountUsdCents: usdCents, currency: 'USD', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: to.fullNameAr, toAccount: to.fxAccount, ref });
       save();
-      return sendJson(res, 200, { ok: true, ref, user: publicUser(me), suggestBeneficiary: suggestBeneficiary(me, to) });
+      return sendJson(res, 200, { ok: true, ref, user: publicUser(me), feeUsdCents: TRANSFER_FEE_USD_CENTS, suggestBeneficiary: suggestBeneficiary(me, to) });
     }
     if (p === '/api/transactions' && method === 'GET') {
       const d = db();
@@ -609,13 +613,14 @@ async function handle(req, res) {
       if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
       if ((db().users.find((u) => u.id === to.userId) || {}).status === 'banned') return sendJson(res, 400, { ok: false, error: 'bad_card' });
       if (!checkPin(me, body.pin, res)) return;
-      if (from.balanceCents < cents) return sendJson(res, 400, { ok: false, error: 'insufficient_card' });
+      if (from.balanceCents < cents + TRANSFER_FEE_USD_CENTS) return sendJson(res, 400, { ok: false, error: 'insufficient_card' });
       const ref = dbmod.refFor(db().nextTxSeq);
-      from.balanceCents -= cents; to.balanceCents += cents;
+      from.balanceCents -= (cents + TRANSFER_FEE_USD_CENTS); to.balanceCents += cents;
       addTx({ userId: me.id, type: 'card_transfer_out', titleAr: 'تحويل من بطاقة إلى بطاقة', titleEn: 'Card-to-card transfer', amountUsdCents: -cents, currency: 'USD', fromName: me.fullNameAr, fromAccount: masked(from.fullNumber), toName: (db().users.find((u) => u.id === to.userId) || {}).fullNameAr || '', toAccount: masked(to.fullNumber), cardId: from.id, ref });
+      addTx({ userId: me.id, type: 'card_transfer_fee', titleAr: 'رسوم تحويل بطاقة — 0.50 USD', titleEn: 'Card transfer fee — 0.50 USD', amountUsdCents: -TRANSFER_FEE_USD_CENTS, currency: 'USD', fromName: me.fullNameAr, fromAccount: masked(from.fullNumber), toName: me.fullNameAr, toAccount: masked(from.fullNumber), cardId: from.id, ref });
       addTx({ userId: to.userId, type: 'card_transfer_in', titleAr: 'تحويل وارد من بطاقة', titleEn: 'Incoming card-to-card transfer', amountUsdCents: cents, currency: 'USD', fromName: me.fullNameAr, fromAccount: masked(from.fullNumber), toName: (db().users.find((u) => u.id === to.userId) || {}).fullNameAr || '', toAccount: masked(to.fullNumber), cardId: to.id, ref });
       save();
-      return sendJson(res, 200, { ok: true, ref, card: cardView(from) });
+      return sendJson(res, 200, { ok: true, ref, card: cardView(from), feeUsdCents: TRANSFER_FEE_USD_CENTS });
     }
     const cardIdMatch = p.match(/^\/api\/cards\/(\d+)(?:\/(details|freeze|unfreeze|cancel|change-cvv|topup|limit|history))?$/);
     if (cardIdMatch) {
