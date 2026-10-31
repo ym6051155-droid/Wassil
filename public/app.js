@@ -174,6 +174,20 @@ const app = () => document.getElementById('app');
 function t(k){ const v = I18N[k]; return v ? (lang === 'en' ? v.en : v.ar) : k; }
 function nameOf(u){ return lang === 'en' && u && u.fullNameEn ? u.fullNameEn : (u ? u.fullNameAr : ''); }
 function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'), 3000); }
+// In-app confirmation sheet (Wassil design) — replaces the browser's native
+// confirm() dialog, whose title bar showed the site URL and clashed with the app.
+function confirmSheet({ title, lines = [], note = '', confirmLabel, cancelLabel, danger = false }) {
+  return new Promise((resolve) => {
+    const back = document.createElement('div'); back.className = 'sheet-back';
+    const rows = lines.map(([l, v]) => `<div class="sheet-row"><span class="sheet-label">${esc(l)}</span><span class="sheet-value">${esc(v)}</span></div>`).join('');
+    back.innerHTML = `<div class="sheet"><div class="sheet-title">${esc(title)}</div>${rows}${note ? `<p class="sheet-note">${esc(note)}</p>` : ''}<div class="sheet-actions"><button type="button" class="btn secondary" id="sheet-cancel">${esc(cancelLabel || (lang === 'en' ? 'Cancel' : 'إلغاء'))}</button><button type="button" class="btn" id="sheet-ok" ${danger ? 'style="background:#dc2626"' : ''}>${esc(confirmLabel || (lang === 'en' ? 'Confirm' : 'تأكيد'))}</button></div></div>`;
+    const done = (v) => { back.remove(); resolve(v); };
+    back.querySelector('#sheet-ok').onclick = () => done(true);
+    back.querySelector('#sheet-cancel').onclick = () => done(false);
+    back.onclick = (e) => { if (e.target === back) done(false); };
+    document.body.appendChild(back);
+  });
+}
 function setLang(l){ lang = l; localStorage.setItem('wassil-lang', l); document.documentElement.lang = l; document.documentElement.dir = l === 'en' ? 'ltr' : 'rtl'; const lb = $('#langBtn'); if (lb) lb.textContent = l === 'en' ? 'عربي' : 'EN'; render(); }
 async function api(path, opts={}) {
   const r = await fetch(path, { ...opts, headers: { 'Content-Type':'application/json', ...(token?{Authorization:'Bearer '+token}:{}), ...(opts.headers||{}) } });
@@ -562,7 +576,7 @@ async function doCardTopup(){
   const id = Number($('#ct-card') ? $('#ct-card').value : ctCardId);
   const amt = $('#ct-amt') ? $('#ct-amt').value : '';
   if (!id || !amt) { const el = $('#ct-err'); if (el) el.textContent = lang === 'en' ? 'Pick a card and amount' : 'اختر بطاقة ومبلغاً'; return; }
-  if (!confirm((lang === 'en' ? 'Review top-up\nAmount: ' : 'مراجعة الشحن\nالمبلغ: ') + amt + ' USD')) return;
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review top-up' : 'مراجعة الشحن', lines: [[lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD']] }))) return;
   try { await api('/api/cards/' + id + '/topup', { method:'POST', body: JSON.stringify({ amountUsd: amt }) }); toast('OK'); await loadDash(); openCard(id); }
   catch(e){ const el = $('#ct-err'); if (el) el.textContent = e.message; }
 }
@@ -588,7 +602,7 @@ async function doCardTransfer(){
   const to = $('#cc-to') ? $('#cc-to').value : ''; const amt = $('#cc-amt') ? $('#cc-amt').value : '';
   if (!from || !to || !amt) { const el = $('#cc-err'); if (el) el.textContent = lang === 'en' ? 'Fill in card, recipient and amount' : 'أكمل البطاقة والمستلم والمبلغ'; return; }
   // Review step; the optional note is shown on the form only — the card-transfer API takes no note field, so it is not sent or stored.
-  if (!confirm((lang === 'en' ? 'Review card transfer\nAmount: ' : 'مراجعة التحويل\nالمبلغ: ') + amt + ' USD')) return;
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD']] }))) return;
   try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt }) }); toast('OK — ' + j.ref); await loadDash(); openCard(from); }
   catch(e){ const el = $('#cc-err'); if (el) el.textContent = e.message; }
 }
@@ -887,11 +901,11 @@ async function lookupAcc(){
     $('#tr-name').textContent = (lang==='en' ? j.nameEn : j.nameAr) + ' — ' + j.sdgAccount; } catch { $('#tr-name').textContent = 'Not found / غير موجود'; }
 }
 async function doTransfer(){
-  // Review step matching the screenshot's review button: confirm the summary first.
+  // Review step: elegant in-app sheet with the transfer summary.
   // The optional note is shown on the form only; the transfer API takes no note field, so it is not sent or stored.
   const to = $('#tr-to') ? $('#tr-to').value : ''; const amt = $('#tr-amt') ? $('#tr-amt').value : '';
   const name = $('#tr-name') ? $('#tr-name').textContent : '';
-  if (!confirm((lang === 'en' ? 'Review transfer\nTo: ' : 'مراجعة التحويل\nإلى: ') + (name || to) + '\n' + (lang === 'en' ? 'Amount: ' : 'المبلغ: ') + amt + ' SDG')) return;
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review transfer' : 'مراجعة التحويل', lines: [[lang === 'en' ? 'To' : 'إلى', name || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' SDG']], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
   try { await loadDash(); const j = await api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt }) });
     toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#tr-err').textContent = e.message; }
 }
@@ -928,7 +942,7 @@ async function copyCardNum(num){
 async function freezeCard(){ try { const j = await api('/api/cards/' + selCard.id + '/freeze', { method:'POST', body:'{}' }); selCard = { ...j.card, history: selCard.history }; render(); } catch(e){ toast(e.message); } }
 async function unfreezeCard(){ try { const j = await api('/api/cards/' + selCard.id + '/unfreeze', { method:'POST', body:'{}' }); selCard = { ...j.card, history: selCard.history }; render(); } catch(e){ toast(e.message); } }
 async function cancelCard(){
-  if (!confirm(t('cancelCard') + ' — 100,000 SDG issuance fee is NON-REFUNDABLE and final. Any remaining USD balance stays locked on the cancelled card and does not return to the account. / رسوم الإصدار 100,000 جنيه غير مستردة ونهائية، وأي رصيد دولار متبقٍّ يبقى مقفلاً على البطاقة الملغاة ولا يعود للحساب.')) return;
+  if (!(await confirmSheet({ title: t('cancelCard'), note: '100,000 SDG issuance fee is NON-REFUNDABLE and final. Any remaining USD balance stays locked on the cancelled card and does not return to the account. / رسوم الإصدار 100,000 جنيه غير مستردة ونهائية، وأي رصيد دولار متبقٍّ يبقى مقفلاً على البطاقة الملغاة ولا يعود للحساب.', confirmLabel: t('cancelCard'), danger: true }))) return;
   try { const j = await api('/api/cards/' + selCard.id + '/cancel', { method:'POST', body:'{}' }); toast(j.noteAr || 'Cancelled'); await loadDash(); go('cards'); } catch(e){ toast(e.message); }
 }
 async function changeCvv(){
