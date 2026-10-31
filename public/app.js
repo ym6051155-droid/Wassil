@@ -288,13 +288,14 @@ function accountView(){
   const others = (dash?.directory || []).filter(u => u.id !== me.id);
   const ben = others.map(u => `<button type="button" class="menu-row" onclick="go('transfer')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet' : 'لا يوجد مستفيدون بعد'}</p>`;
   return `<div class="page-title">${t('myAccount')}</div><p class="page-sub">${lang === 'en' ? 'Your saved demo account data and settings.' : 'بيانات حسابك التجريبي المحفوظ وإعداداته.'}</p>
-  <div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc(letter)}</div><div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${t('demoClient')}</div></div></div>
+  <div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc(letter)}</div><div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${me.role === 'admin' ? (lang === 'en' ? 'Admin account — Wassil' : 'حساب الأدمن — وصل') : t('demoClient')}</div></div></div>
   <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(me.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(me.sdgBalance)}</span></div>
   <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(me.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(me.fxBalanceCents)}</span></div>
   <div class="acct-row"><span class="acct-ic">${IC.mail}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${t('email')}</span><span class="acct-row-sub" style="display:block">${esc(me.email)}</span></span><span class="pill-active">${me.status === 'active' ? t('active') : esc(me.status || '')}</span></div></div>
   <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${t('beneficiaries')}</span></span></div>${ben}</div>
   <div class="profile-card"><button type="button" class="menu-row" onclick="go('statement')"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('notifications')}</span><span class="menu-row-sub">${lang === 'en' ? 'Your operations and updates' : 'عملياتك وتحديثاتك'}</span></span><span>›</span></button>
   <button type="button" class="menu-row" onclick="go('security')"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('security')}</span><span class="menu-row-sub">${lang === 'en' ? 'Fingerprint and password' : 'البصمة وكلمة المرور'}</span></span><span>›</span></button></div>
+  ${me.role === 'admin' ? `<div class="profile-card" style="border:1.5px solid var(--teal)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'Admin mode active' : 'وضع الأدمن مفعّل'}</div><p class="muted" style="margin:0 0 12px">${lang === 'en' ? 'Fund user accounts and review registrations from the admin dashboard.' : 'مؤّل حسابات المستخدمين وراجع التسجيلات من لوحة الأدمن.'}</p><button class="btn" onclick="go('admin')">${lang === 'en' ? 'Open admin dashboard' : 'فتح لوحة الأدمن'}</button></div>` : ''}
   <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
   <div class="demo-foot">${t('demoNote')}</div>`;
 }
@@ -565,14 +566,25 @@ function receiptView(){
   <button class="btn-outline" onclick="go('statement')">${t('backStatement')}</button>`;
 }
 function adminView(){
-  const users = (dash?.allUsers || []).map(u =>
-    `<div class="row"><span>${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</span><span>${moneySdg(u.sdgBalance)}</span></div>`).join('');
+  const all = dash?.allUsers || [];
+  const active = (dash?.directory || []);
+  const opts = active.map(u => `<option value="${u.id}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
+  const users = all.map(u =>
+    `<div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc((nameOf(u) || 'و').trim().charAt(0) || 'و')}</div><div><div class="profile-name">${esc(nameOf(u))}</div><div class="profile-role" style="direction:ltr;text-align:start">${esc(u.email)}</div></div><span class="pill-active">${u.status === 'active' ? t('active') : esc(u.status || '')}</span></div>
+    <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(u.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(u.sdgBalance)}</span></div>
+    <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(u.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(u.fxBalanceCents)}</span></div></div>`).join('') || `<p class="muted">${lang === 'en' ? 'No registered users yet' : 'لا يوجد مستخدمون مسجلون بعد'}</p>`;
+  const txRows = (dash?.allTransactions || []).map(opRow).join('') || `<p class="muted">—</p>`;
   return `${backLink(t('backHome'), 'home')}
-  <div class="page-title">${t('admin')}</div><p class="page-sub">${lang === 'en' ? 'Fund demo user accounts.' : 'تمويل حسابات المستخدمين التجريبية.'}</p>
-  <div class="card"><h2>${t('admin')}</h2>${users}
-  <label>User ID / رقم المستخدم</label><input id="ad-id" type="number">
+  <div class="page-title">${t('admin')}</div><p class="page-sub">${lang === 'en' ? 'Demo admin account from Wassil — fund user accounts and review their operations.' : 'حساب إداري تجريبي من وصل — موّل حسابات المستخدمين وراجع عملياتهم.'}</p>
+  <div class="card"><h2>${lang === 'en' ? 'Fund a user account' : 'تمويل حساب مستخدم'}</h2>
+  <label>${lang === 'en' ? 'Activated user account' : 'حساب المستخدم'}</label>
+  <select id="ad-user"><option value="">${lang === 'en' ? '— Pick an activated user —' : '— اختر مستخدماً مفعلاً —'}</option>${opts}</select>
   <label>${t('amount')} (SDG)</label><input id="ad-amt" type="number" min="1">
-  <button class="btn" onclick="adminFund()">Fund / تمويل</button><div id="ad-err" class="err"></div></div>`;
+  <button class="btn" onclick="adminFund()">${lang === 'en' ? 'Fund now' : 'تمويل الآن'}</button><div id="ad-err" class="err"></div></div>
+  <div class="page-title" style="margin-top:18px">${lang === 'en' ? `All registered accounts (${all.length})` : `كل الحسابات المسجلة (${all.length})`}</div>${users}
+  <div class="page-title" style="margin-top:18px">${lang === 'en' ? 'Transfer and transaction log' : 'سجل التحويل والمعاملات'}</div>
+  <div class="card">${txRows}</div>
+  <div class="demo-foot">${t('demoNote')}</div>`;
 }
 function securityView(){
   return `${backLink(t('backServices'), 'services')}
@@ -745,7 +757,9 @@ async function sellAsset(id){
   try { await api('/api/investments/sell', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message); }
 }
 async function adminFund(){
-  try { await api('/api/admin/fund', { method:'POST', body: JSON.stringify({ targetUserId: $('#ad-id').value, amount: $('#ad-amt').value }) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ $('#ad-err').textContent = e.message; }
+  const target = $('#ad-user') ? $('#ad-user').value : ($('#ad-id') ? $('#ad-id').value : '');
+  if (!target) { $('#ad-err').textContent = lang === 'en' ? 'Pick an activated user' : 'اختر مستخدماً مفعلاً'; return; }
+  try { await api('/api/admin/fund', { method:'POST', body: JSON.stringify({ targetUserId: target, amount: $('#ad-amt').value }) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ $('#ad-err').textContent = e.message; }
 }
 async function loadBills(){
   try { const j = await api('/api/bills'); $('#bills-list').innerHTML = j.bills.map(b => `<div class="row"><span>${lang==='en'?b.nameEn:b.nameAr} — ${b.amountSdg}</span><button class="btn small" onclick="payBill('${b.id}')">Pay / دفع</button></div>`).join(''); } catch {}
