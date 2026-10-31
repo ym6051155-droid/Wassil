@@ -258,7 +258,7 @@ function txAmount(tx){
   if (tx.currency === 'USD' && tx.amountUsdCents != null) return (tx.amountUsdCents >= 0 ? '+' : '') + moneyUsd(tx.amountUsdCents);
   return (tx.amountSdg >= 0 ? '+' : '') + moneySdg(tx.amountSdg);
 }
-function go(v){ if (view === 'scan' && v !== 'scan') stopScan(); view = v; render(); }
+function go(v){ if (view === 'scan' && v !== 'scan') stopScan(); if (view === 'statement' && v !== 'statement') { stopStmtPoll(); stmtTxs = null; } view = v; render(); }
 async function loadDash(){ try { dash = await api('/api/dashboard'); me = dash.user; } catch { me = null; } }
 let showBal = true;
 function toggleBal(){ showBal = !showBal; render(); }
@@ -462,8 +462,31 @@ function applyStmtFilter(){
   const l5 = document.getElementById('stmtLast5Btn'); if (l5) l5.classList.toggle('on', stmtLast5);
 }
 function loadStmtTxs(){ if (stmtTxs || stmtTxsLoading) return; stmtTxsLoading = true; api('/api/transactions').then(d => { stmtTxs = d.transactions || []; stmtTxsLoading = false; if (view === 'statement' || view === 'notifications') render(); }).catch(() => { stmtTxsLoading = false; }); }
+function stopStmtPoll(){ if (window._stmtPoll) { clearInterval(window._stmtPoll); window._stmtPoll = null; } }
+function startStmtPoll(){
+  if (window._stmtPoll) return;
+  window._stmtPoll = setInterval(async () => {
+    if (view !== 'statement') { stopStmtPoll(); return; }
+    try {
+      const d = await api('/api/transactions');
+      const fresh = d.transactions || [];
+      const old = stmtTxs || [];
+      const changed = fresh.length !== old.length || (fresh[0] && old[0] && fresh[0].id !== old[0].id) || (!fresh[0] !== !old[0]);
+      if (!changed) return;
+      stmtTxs = fresh;
+      const txs = stmtBaseTxs();
+      let inSdg = 0, outSdg = 0;
+      txs.forEach(tx => { const a = tx.amountSdg || 0; if (a > 0) inSdg += a; if (a < 0) outSdg += -a; });
+      const elIn = document.getElementById('stmt-sum-in'), elOut = document.getElementById('stmt-sum-out'), elCnt = document.getElementById('stmt-sum-count');
+      if (elIn) elIn.textContent = moneySdg(inSdg);
+      if (elOut) elOut.textContent = moneySdg(outSdg);
+      if (elCnt) elCnt.textContent = String(txs.length);
+      applyStmtFilter();
+    } catch {}
+  }, 20000);
+}
 function statementView(){
-  loadStmtTxs();
+  loadStmtTxs(); startStmtPoll();
   const txs = stmtBaseTxs();
   let inSdg = 0, outSdg = 0;
   txs.forEach(tx => { const a = tx.amountSdg || 0; if (a > 0) inSdg += a; if (a < 0) outSdg += -a; });
@@ -472,10 +495,11 @@ function statementView(){
   const flt = (r, ar, en) => `<button type="button" class="flt-btn${stmtRange === r ? ' on' : ''}" data-range="${r}" onclick="stmtRange=this.dataset.range;applyStmtFilter()">${lang === 'en' ? en : ar}</button>`;
   return `${backLink(t('backHome'), 'home')}
   <div class="page-title">${t('statement')}</div><p class="page-sub">${t('statementSub')}</p>
+  <p class="muted">${lang === 'en' ? 'The summary updates automatically when your balance changes.' : 'الملخص يتحدث تلقائياً أول ما يتغير رصيدك.'}</p>
   <div class="summary-row">
-    <div class="summary-card"><b class="pos">${moneySdg(inSdg)}</b><span>${t('totalIn')} (${lang === 'en' ? 'SDG' : 'ج.س'})</span></div>
-    <div class="summary-card"><b class="neg">${moneySdg(outSdg)}</b><span>${t('totalOut')} (${lang === 'en' ? 'SDG' : 'ج.س'})</span></div>
-    <div class="summary-card"><b>${txs.length}</b><span>${t('opsCount')}</span></div>
+    <div class="summary-card"><b class="pos" id="stmt-sum-in">${moneySdg(inSdg)}</b><span>${t('totalIn')} (${lang === 'en' ? 'SDG' : 'ج.س'})</span></div>
+    <div class="summary-card"><b class="neg" id="stmt-sum-out">${moneySdg(outSdg)}</b><span>${t('totalOut')} (${lang === 'en' ? 'SDG' : 'ج.س'})</span></div>
+    <div class="summary-card"><b id="stmt-sum-count">${txs.length}</b><span>${t('opsCount')}</span></div>
   </div>
   <button type="button" class="btn-outline" onclick="downloadStatementText()">${t('downloadText')}</button>
   <button type="button" class="btn" onclick="downloadStatementPdf()">${lang === 'en' ? 'Download statement as PDF' : 'تنزيل الكشف PDF'}</button>
