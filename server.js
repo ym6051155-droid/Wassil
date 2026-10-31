@@ -148,6 +148,7 @@ async function handle(req, res) {
     // ---- auth / signup ----
     if (p === '/api/register' && method === 'POST') {
       const { email, fullNameAr, fullNameEn, password } = body;
+      const pendingInviteCode = String(body.inviteCode || '').trim().toUpperCase().slice(0, 20);
       if (!isEmail(email)) return sendJson(res, 400, { ok: false, error: 'invalid_email' });
       if (!isQuadruple(fullNameAr)) return sendJson(res, 400, { ok: false, error: 'name_must_be_quadruple_ar' });
       if (!isQuadruple(fullNameEn) || !isLatin(fullNameEn)) return sendJson(res, 400, { ok: false, error: 'name_must_be_quadruple_en' });
@@ -158,7 +159,7 @@ async function handle(req, res) {
       const user = {
         id: d.nextUserSeq++, email, passwordHash: hashPassword(password),
         fullNameAr: fullNameAr.trim(), fullNameEn: fullNameEn.trim(),
-        role: 'user', status: 'pending', activationCode: code,
+        role: 'user', status: 'pending', activationCode: code, pendingInviteCode,
         sdgAccount: null, fxAccount: null, sdgBalance: 0, fxBalanceCents: 0,
         frozenSdg: 0, frozenAll: false,
         createdAt: new Date().toISOString(),
@@ -173,7 +174,7 @@ async function handle(req, res) {
       const u = d.users.find((x) => x.email === body.email);
       if (!u || u.activationCode !== String(body.code)) return sendJson(res, 400, { ok: false, error: 'bad_code' });
       if (u.status === 'banned') return sendJson(res, 403, { ok: false, error: 'banned' });
-      let bonusGranted = false;
+      let bonusGranted = false, inviteBonusGranted = false, inviteInvalid = false, inviteDeviceClaimed = false;
       if (u.status !== 'active') {
         u.status = 'active';
         u.sdgAccount = dbmod.accountNumber(u.id, 1000);
@@ -192,9 +193,30 @@ async function handle(req, res) {
             addTx({ userId: u.id, type: 'welcome_bonus', titleAr: 'مكافأة ترحيبية — 15,000 ج.س', titleEn: 'Welcome bonus — 15,000 SDG', amountSdg: 15000, currency: 'SDG', fromName: 'وصل', fromAccount: 'Wassil', toName: u.fullNameAr, toAccount: u.sdgAccount });
           }
         }
+        // Invite bonus: 50,000 SDG for the NEW account that enters a valid
+        // invite code at activation. The code is WSL + the inviter's SDG
+        // account number (e.g. WSL1002), or just the account number itself.
+        // Once per account (activation runs once) and once per device, so one
+        // device cannot farm the bonus with many accounts. The inviter gets
+        // nothing extra — the reward is for writing/using the code.
+        const rawCode = String(u.pendingInviteCode || body.inviteCode || '').trim().toUpperCase();
+        if (rawCode) {
+          const digits = rawCode.startsWith('WSL') ? rawCode.slice(3) : rawCode;
+          const inviter = d.users.find((x) => x.status === 'active' && x.id !== u.id && normAcct(x.sdgAccount) === normAcct(digits));
+          const devId2 = String(body.deviceId || '').trim();
+          if (!inviter) inviteInvalid = true;
+          else if (devId2 && (d.usedInviteDevices || []).includes(devId2)) inviteDeviceClaimed = true;
+          else if (devId2) {
+            if (!d.usedInviteDevices) d.usedInviteDevices = [];
+            d.usedInviteDevices.push(devId2);
+            u.sdgBalance += 50000;
+            inviteBonusGranted = true;
+            addTx({ userId: u.id, type: 'invite_bonus', titleAr: 'مكافأة رمز دعوة — 50,000 ج.س', titleEn: 'Invite code bonus — 50,000 SDG', amountSdg: 50000, currency: 'SDG', fromName: inviter.fullNameAr, fromAccount: inviter.sdgAccount, toName: u.fullNameAr, toAccount: u.sdgAccount });
+          }
+        }
         save();
       }
-      return sendJson(res, 200, { ok: true, user: publicUser(u), bonusGranted, bonusSdg: bonusGranted ? 15000 : 0 });
+      return sendJson(res, 200, { ok: true, user: publicUser(u), bonusGranted, bonusSdg: bonusGranted ? 15000 : 0, inviteBonusGranted, inviteInvalid, inviteDeviceClaimed });
     }
     if (p === '/api/login' && method === 'POST') {
       const ident = String(body.email || body.identifier || '').trim();
@@ -599,8 +621,12 @@ function sendFile(res, full) {
   });
 }
 
-ensureAdmin();
-http.createServer(handle).listen(PORT, () => {
-  console.log('[wassil] Demo app listening on http://localhost:' + PORT);
-  console.log('[wassil] Demo only — fake data, no real money. Admin: admin@wassil.demo (password from ADMIN_PASSWORD env var, if set).');
-});
+(async () => {
+  await dbmod.initRemote();
+  ensureAdmin();
+  http.createServer(handle).listen(PORT, () => {
+    console.log('[wassil] Demo app listening on http://localhost:' + PORT);
+    console.log('[wassil] Supabase remote store: ' + (dbmod.isRemoteEnabled() ? 'ENABLED' : 'disabled — local file only, data will be wiped on deploy/restart'));
+    console.log('[wassil] Demo only — fake data, no real money. Admin: admin@wassil.demo (password from ADMIN_PASSWORD env var, if set).');
+  });
+})();

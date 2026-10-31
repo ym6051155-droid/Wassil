@@ -266,6 +266,7 @@ function signupView(){
   <label>${t('nameAr')}</label><input id="su-ar">
   <label>${t('nameEn')}</label><input id="su-en">
   <label>${t('password')}</label><div class="input-wrap">${IC.lock}<input id="su-pass" type="password"></div>
+  <label>${lang === 'en' ? 'Invite code (optional)' : 'رمز الدعوة (اختياري)'}</label><input id="su-invite" placeholder="WSL1002">
   <button class="btn" onclick="doSignup()">${t('signup')}</button>
   <div id="su-err" class="err"></div><div id="su-ok" class="ok"></div>
   <div id="su-activate" class="hidden"><label>Activation code / كود التفعيل</label><input id="su-code"><button class="btn" onclick="doActivate()">${t('confirm')}</button></div>
@@ -337,6 +338,10 @@ function accountView(){
   <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(me.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(me.fxBalanceCents)}</span></div>
   <div class="acct-row"><span class="acct-ic">${IC.mail}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${t('email')}</span><span class="acct-row-sub" style="display:block">${esc(me.email)}</span></span><span class="pill-active">${me.status === 'active' ? t('active') : esc(me.status || '')}</span></div></div>
   ${me.frozenAll ? `<div class="profile-card" style="border:1.5px solid var(--danger)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'All assets frozen' : 'كل الأصول مجمدة'}</div><p class="muted" style="margin:0">${lang === 'en' ? 'The admin has frozen all your assets — no outgoing operations are possible until the admin releases the freeze.' : 'الأدمن جمّد كل أصولك — لا يمكن إجراء أي عملية صادرة حتى يفك الأدمن التجميد.'}</p></div>` : ((me.frozenSdg || 0) > 0 ? `<div class="profile-card" style="border:1.5px solid var(--danger)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'Amount frozen' : 'مبلغ مجمد'}</div><p class="muted" style="margin:0">${lang === 'en' ? `Frozen by admin: ${moneySdg(me.frozenSdg)} — your usable balance is your balance minus the frozen amount.` : `مبلغ مجمد من الأدمن: ${moneySdg(me.frozenSdg)} — رصيدك المتاح هو رصيدك ناقص المبلغ المجمد.`}</p></div>` : '')}
+  <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${lang === 'en' ? 'Your invite code' : 'رمز الدعوة الخاص بك'}</span></span></div>
+  <p class="muted" style="direction:ltr;text-align:center;font-weight:900;font-size:18px;color:#0f766e">WSL${esc(me.sdgAccount || '')}</p>
+  <p class="muted">${lang === 'en' ? 'Share it: any new account that enters this code at activation gets a 50,000 SDG invite bonus.' : 'شاركه: أي حساب جديد يكتب هذا الرمز عند التفعيل بياخد مكافأة دعوة 50,000 ج.س.'}</p>
+  <button class="btn secondary" onclick="copyInvite()">${lang === 'en' ? 'Copy invite code' : 'نسخ رمز الدعوة'}</button></div>
   <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${t('beneficiaries')}</span></span></div>${ben}</div>
   <div class="profile-card"><button type="button" class="menu-row" onclick="go('statement')"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('notifications')}</span><span class="menu-row-sub">${lang === 'en' ? 'Your operations and updates' : 'عملياتك وتحديثاتك'}</span></span><span>›</span></button>
   <button type="button" class="menu-row" onclick="go('security')"><span class="acct-ic">${IC.shield}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${t('security')}</span><span class="menu-row-sub">${lang === 'en' ? 'Fingerprint and password' : 'البصمة وكلمة المرور'}</span></span><span>›</span></button></div>
@@ -461,6 +466,11 @@ function scanView(){
   <div class="card" style="text-align:center"><video id="scan-video" playsinline muted style="width:100%;max-width:420px;border-radius:16px;background:#000"></video><canvas id="scan-canvas" style="display:none"></canvas>
   <p class="muted" id="scan-status">${lang === 'en' ? 'Starting camera…' : 'جاري تشغيل الكاميرا…'}</p>
   <button class="btn secondary" onclick="stopScan(); go('home');">${lang === 'en' ? 'Stop camera' : 'إيقاف الكاميرا'}</button></div>`;
+}
+async function copyInvite(){
+  const code = 'WSL' + (me?.sdgAccount || '');
+  try { await navigator.clipboard.writeText(code); } catch { const ta = document.createElement('textarea'); ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast(lang === 'en' ? 'Invite code copied' : 'تم نسخ رمز الدعوة');
 }
 async function copyAccount(){
   try { await navigator.clipboard.writeText(me.sdgAccount || ''); } catch { const ta = document.createElement('textarea'); ta.value = me.sdgAccount || ''; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
@@ -820,14 +830,14 @@ async function doLogin(){
   catch(e){ $('#li-err').textContent = e.message; }
 }
 async function doSignup(){
-  try { const j = await api('/api/register', { method:'POST', body: JSON.stringify({ email: $('#su-email').value, fullNameAr: $('#su-ar').value, fullNameEn: $('#su-en').value, password: $('#su-pass').value }) });
+  try { const j = await api('/api/register', { method:'POST', body: JSON.stringify({ email: $('#su-email').value, fullNameAr: $('#su-ar').value, fullNameEn: $('#su-en').value, password: $('#su-pass').value, inviteCode: $('#su-invite') ? $('#su-invite').value : '' }) });
     $('#su-ok').textContent = 'Activation code (demo, no real email sent): ' + j.activationCode + ' / كود التفعيل التجريبي: ' + j.activationCode;
     $('#su-activate').classList.remove('hidden'); window._actEmail = j.email; window._actCode = j.activationCode; }
   catch(e){ $('#su-err').textContent = e.message; }
 }
 async function doActivate(){
   try { const j = await api('/api/activate', { method:'POST', body: JSON.stringify({ email: window._actEmail, code: $('#su-code').value, deviceId: getDeviceId() }) });
-    $('#su-ok').textContent = 'Activated! Account: ' + j.user.sdgAccount + ' / تم التفعيل! رقم الحساب: ' + j.user.sdgAccount + (j.bonusGranted ? ' — Welcome bonus: 15,000 SDG / مكافأة ترحيبية: 15,000 ج.س' : ''); go('login'); }
+    $('#su-ok').textContent = 'Activated! Account: ' + j.user.sdgAccount + ' / تم التفعيل! رقم الحساب: ' + j.user.sdgAccount + (j.bonusGranted ? ' — Welcome bonus: 15,000 SDG / مكافأة ترحيبية: 15,000 ج.س' : '') + (j.inviteBonusGranted ? ' — Invite bonus: 50,000 SDG / مكافأة دعوة: 50,000 ج.س' : '') + (j.inviteInvalid ? ' — Invite code was invalid, activated without invite bonus / رمز الدعوة غير صحيح، تم التفعيل بدون مكافأة الدعوة' : '') + (j.inviteDeviceClaimed ? ' — Invite bonus already claimed on this device / مكافأة الدعوة مستخدمة من قبل على هذا الجهاز' : ''); go('login'); }
   catch(e){ $('#su-err').textContent = e.message; }
 }
 function doLogout(){ token=''; localStorage.removeItem('wassil-token'); me=null; go('login'); }
