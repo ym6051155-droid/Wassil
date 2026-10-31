@@ -75,6 +75,8 @@ function addTx(tx) {
   d.transactions.push(tx);
   return tx;
 }
+function availableSdg(u) { return dbmod.availableSdg(u); }
+function isFrozenAll(u) { return dbmod.isFrozenAll(u); }
 function findBySdg(acct) { return db().users.find((u) => u.sdgAccount === acct); }
 function findByFx(acct) { return db().users.find((u) => u.fxAccount === acct); }
 function findCardByNumber(num) {
@@ -112,7 +114,7 @@ function ensureAdmin() {
     fullNameAr: 'مدير وصل التجريبي العام', fullNameEn: 'Wassil Demo Manager',
     role: 'admin', status: 'active',
     sdgAccount: dbmod.accountNumber(seq, '1001'), fxAccount: dbmod.accountNumber(seq, '2002'),
-    sdgBalance: 0, fxBalanceCents: 0, createdAt: new Date().toISOString(),
+    sdgBalance: 0, fxBalanceCents: 0, frozenSdg: 0, frozenAll: false, createdAt: new Date().toISOString(),
   };
   d.users.push(admin); save();
   console.log('[wassil] Admin account auto-created for ' + adminEmail + ' (first use).');
@@ -137,6 +139,11 @@ async function handle(req, res) {
   const me = p.startsWith('/api/webauthn/login') ? null : authUser(req);
 
   try {
+    // Banned accounts do not open at all, except through an admin unban.
+    // A token issued before the ban is therefore useless until unbanned.
+    if (me && me.status === 'banned' && p !== '/api/login' && !p.startsWith('/api/webauthn/login')) {
+      return sendJson(res, 403, { ok: false, error: 'banned' });
+    }
     // ---- auth / signup ----
     if (p === '/api/register' && method === 'POST') {
       const { email, fullNameAr, fullNameEn, password } = body;
@@ -152,6 +159,7 @@ async function handle(req, res) {
         fullNameAr: fullNameAr.trim(), fullNameEn: fullNameEn.trim(),
         role: 'user', status: 'pending', activationCode: code,
         sdgAccount: null, fxAccount: null, sdgBalance: 0, fxBalanceCents: 0,
+        frozenSdg: 0, frozenAll: false,
         createdAt: new Date().toISOString(),
       };
       d.users.push(user); save();
@@ -163,6 +171,7 @@ async function handle(req, res) {
       const d = db();
       const u = d.users.find((x) => x.email === body.email);
       if (!u || u.activationCode !== String(body.code)) return sendJson(res, 400, { ok: false, error: 'bad_code' });
+      if (u.status === 'banned') return sendJson(res, 403, { ok: false, error: 'banned' });
       if (u.status !== 'active') {
         u.status = 'active';
         u.sdgAccount = dbmod.accountNumber(u.id, '1001');
@@ -175,6 +184,7 @@ async function handle(req, res) {
     if (p === '/api/login' && method === 'POST') {
       const u = db().users.find((x) => x.email === body.email);
       if (!u || !verifyPassword(body.password || '', u.passwordHash)) return sendJson(res, 401, { ok: false, error: 'bad_login' });
+      if (u.status === 'banned') return sendJson(res, 403, { ok: false, error: 'banned' });
       if (u.status !== 'active') return sendJson(res, 403, { ok: false, error: 'not_activated' });
       const token = newToken();
       db().sessions.push({ token, userId: u.id, createdAt: new Date().toISOString() }); save();
@@ -202,6 +212,40 @@ async function handle(req, res) {
       if (!target || !(amount > 0)) return sendJson(res, 400, { ok: false, error: 'bad_fund' });
       target.sdgBalance += amount;
       addTx({ userId: target.id, type: 'admin_fund', titleAr: 'تمويل من الأدمن', titleEn: 'Funding from admin', amountSdg: amount, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: target.fullNameAr, toAccount: target.sdgAccount });
+      save();
+      return sendJson(res, 200, { ok: true, user: publicUser(target) });
+    }
+    // ---- admin freeze / ban (admin only; ordinary users get nothing here) ----
+    // Freeze a specific SDG amount, freeze ALL assets, or ban the account.
+    // A banned account does not open until the admin unbans it; only the
+    // admin can unfreeze assets or unban — there is no self-service unlock.
+    if (p.startsWith('/api/admin/') && method === 'POST') {
+      if (!me || me.role !== 'admin') return sendJson(res, 403, { ok: false, error: 'forbidden' });
+      const target = db().users.find((u) => u.id === Number(body.targetUserId));
+      if (!target || target.role === 'admin') return sendJson(res, 400, { ok: false, error: 'bad_target' });
+      const note = (type, titleAr, titleEn) => addTx({ userId: target.id, type, titleAr, titleEn, amountSdg: 0, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: target.fullNameAr, toAccount: target.sdgAccount });
+      if (p === '/api/admin/freeze' ) {
+        const amount = Math.floor(Number(body.amountSdg));
+        if (!(amount > 0)) return sendJson(res, 400, { ok: false, error: 'bad_amount' });
+        if (amount > target.sdgBalance) return sendJson(res, 400, { ok: false, error: 'freeze_exceeds_balance' });
+        target.frozenSdg = amount; target.frozenAll = false;
+        note('admin_freeze', `تجميد مبلغ من الأدمن — ${amount} ج.س`, `Admin freeze — ${amount} SDG`);
+      } else if (p === '/api/admin/freeze-all') {
+        target.frozenSdg = 0; target.frozenAll = true;
+        note('admin_freeze_all', 'تجميد كل الأصول من الأدمن', 'Admin freeze — all assets');
+      } else if (p === '/api/admin/unfreeze') {
+        target.frozenSdg = 0; target.frozenAll = false;
+        note('admin_unfreeze', 'فك تجميد الأصول من الأدمن', 'Admin unfreeze — assets released');
+      } else if (p === '/api/admin/ban') {
+        target.status = 'banned';
+        note('admin_ban', 'حظر الحساب من الأدمن', 'Admin ban — account blocked');
+      } else if (p === '/api/admin/unban') {
+        if (target.status !== 'banned') return sendJson(res, 400, { ok: false, error: 'not_banned' });
+        target.status = 'active';
+        note('admin_unban', 'إعادة فتح الحساب بموافقة الأدمن', 'Admin unban — account reopened by admin');
+      } else {
+        return sendJson(res, 404, { ok: false, error: 'not_found' });
+      }
       save();
       return sendJson(res, 200, { ok: true, user: publicUser(target) });
     }
@@ -244,8 +288,9 @@ async function handle(req, res) {
     if (p === '/api/transfer' && method === 'POST') {
       const to = findBySdg(String(body.toAccount));
       const amount = Math.floor(Number(body.amount));
-      if (!to || to.id === me.id || !(amount > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
-      if (me.sdgBalance < amount) return sendJson(res, 400, { ok: false, error: 'insufficient' });
+      if (!to || to.id === me.id || to.status === 'banned' || !(amount > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
+      if (availableSdg(me) < amount) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       const ref = dbmod.refFor(db().nextTxSeq);
       me.sdgBalance -= amount; to.sdgBalance += amount;
       addTx({ userId: me.id, type: 'transfer_out', titleAr: 'تحويل إلى ' + to.fullNameAr, titleEn: 'Transfer to ' + (to.fullNameEn || to.fullNameAr), amountSdg: -amount, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: to.fullNameAr, toAccount: to.sdgAccount, ref });
@@ -261,7 +306,8 @@ async function handle(req, res) {
     if (p === '/api/fx/fund' && method === 'POST') {
       const amountSdg = Math.floor(Number(body.amountSdg));
       if (!(amountSdg > 0)) return sendJson(res, 400, { ok: false, error: 'bad_amount' });
-      if (me.sdgBalance < amountSdg) return sendJson(res, 400, { ok: false, error: 'insufficient' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
+      if (availableSdg(me) < amountSdg) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       const usdCents = Math.floor(amountSdg / USD_RATE * 100);
       if (usdCents <= 0) return sendJson(res, 400, { ok: false, error: 'amount_too_small' });
       const ref = dbmod.refFor(db().nextTxSeq);
@@ -273,7 +319,8 @@ async function handle(req, res) {
     if (p === '/api/fx/transfer' && method === 'POST') {
       const to = findByFx(String(body.toFxAccount));
       const usdCents = Math.floor(Number(body.amountUsd) * 100);
-      if (!to || to.id === me.id || !(usdCents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
+      if (!to || to.id === me.id || to.status === 'banned' || !(usdCents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_recipient' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
       if (me.fxBalanceCents < usdCents) return sendJson(res, 400, { ok: false, error: 'insufficient_fx' });
       const ref = dbmod.refFor(db().nextTxSeq);
       me.fxBalanceCents -= usdCents; to.fxBalanceCents += usdCents;
@@ -298,7 +345,8 @@ async function handle(req, res) {
     if (p === '/api/bills/pay' && method === 'POST') {
       const bill = BILLS.find((b) => b.id === body.billId);
       if (!bill) return sendJson(res, 400, { ok: false, error: 'bad_bill' });
-      if (me.sdgBalance < bill.amountSdg) return sendJson(res, 400, { ok: false, error: 'insufficient' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
+      if (availableSdg(me) < bill.amountSdg) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       me.sdgBalance -= bill.amountSdg;
       const tx = addTx({ userId: me.id, type: 'bill_pay', titleAr: 'دفع فاتورة ' + bill.nameAr, titleEn: 'Bill payment ' + bill.nameEn, amountSdg: -bill.amountSdg, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: bill.nameAr, toAccount: bill.nameAr, });
       save();
@@ -324,7 +372,8 @@ async function handle(req, res) {
     if (p === '/api/cards/request' && method === 'POST') {
       const active = db().cards.filter((c) => c.userId === me.id && (c.status === 'active' || c.status === 'frozen'));
       if (active.length >= MAX_ACTIVE_CARDS) return sendJson(res, 400, { ok: false, error: 'card_limit' });
-      if (me.sdgBalance < CARD_PRICE_SDG) return sendJson(res, 400, { ok: false, error: 'insufficient' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
+      if (availableSdg(me) < CARD_PRICE_SDG) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       me.sdgBalance -= CARD_PRICE_SDG;
       const now = new Date(); const exp = new Date(now); exp.setFullYear(exp.getFullYear() + 5);
       const fullNumber = newCardNumber();
@@ -344,6 +393,8 @@ async function handle(req, res) {
       if (!from || !to || !(cents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_card' });
       if (from.status !== 'active') return sendJson(res, 400, { ok: false, error: 'card_not_active' });
       if (to.status !== 'active') return sendJson(res, 400, { ok: false, error: 'card_not_active' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
+      if ((db().users.find((u) => u.id === to.userId) || {}).status === 'banned') return sendJson(res, 400, { ok: false, error: 'bad_card' });
       if (from.balanceCents < cents) return sendJson(res, 400, { ok: false, error: 'insufficient_card' });
       const ref = dbmod.refFor(db().nextTxSeq);
       from.balanceCents -= cents; to.balanceCents += cents;
@@ -381,6 +432,7 @@ async function handle(req, res) {
         const cents = Math.floor(Number(body.amountUsd) * 100);
         if (card.status !== 'active') return sendJson(res, 400, { ok: false, error: 'card_not_active' });
         if (!(cents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_amount' });
+        if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
         if (me.fxBalanceCents < cents) return sendJson(res, 400, { ok: false, error: 'insufficient_fx' });
         me.fxBalanceCents -= cents; card.balanceCents += cents;
         const tx = addTx({ userId: me.id, type: 'card_topup', titleAr: `شحن بطاقة ${masked(card.fullNumber)} — ${(cents / 100).toFixed(2)} USD من الحساب الأجنبي`, titleEn: `Card top-up ${masked(card.fullNumber)} — ${(cents / 100).toFixed(2)} USD from FX account`, amountUsdCents: cents, currency: 'USD', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: me.fullNameAr, toAccount: masked(card.fullNumber), cardId: card.id });
@@ -402,7 +454,8 @@ async function handle(req, res) {
       const days = Math.floor(Number(body.durationDays));
       const allowed = [1, 7, 30, 90, 180, 365];
       if (!(principal > 0) || !allowed.includes(days)) return sendJson(res, 400, { ok: false, error: 'bad_deposit' });
-      if (me.sdgBalance < principal) return sendJson(res, 400, { ok: false, error: 'insufficient' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
+      if (availableSdg(me) < principal) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       const rate = depositRate(principal);
       const profit = Math.round(principal * rate * days / 365);
       const maturity = new Date(Date.now() + days * 86400000).toISOString();
@@ -431,8 +484,9 @@ async function handle(req, res) {
       if (!asset || !(qty > 0)) return sendJson(res, 400, { ok: false, error: 'bad_asset' });
       const total = Math.round(qty * asset.priceSdg);
       let holding = db().investments.find((h) => h.userId === me.id && h.assetId === asset.id);
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
       if (isBuy) {
-        if (me.sdgBalance < total) return sendJson(res, 400, { ok: false, error: 'insufficient' });
+        if (availableSdg(me) < total) return sendJson(res, 400, { ok: false, error: 'insufficient' });
         me.sdgBalance -= total;
         if (!holding) { holding = { userId: me.id, assetId: asset.id, quantity: 0, avgPriceSdg: asset.priceSdg }; db().investments.push(holding); }
         holding.avgPriceSdg = Math.round((holding.avgPriceSdg * holding.quantity + total) / (holding.quantity + qty));
