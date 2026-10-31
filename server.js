@@ -244,7 +244,7 @@ async function handle(req, res) {
         allUsers: me.role === 'admin' ? d.users.map(publicUser) : undefined,
         allTransactions: me.role === 'admin' ? d.transactions.slice(-100).reverse() : undefined,
         allCards: me.role === 'admin' ? d.cards.map((c) => ({ ...c, fullNumber: undefined, cvv: undefined, masked: masked(c.fullNumber) })) : undefined,
-        directory: d.users.filter((u) => u.role === 'user' && u.status === 'active').map(publicUser) };
+        beneficiaries: (me.beneficiaries || []).map((id) => d.users.find((u) => u.id === id)).filter(Boolean).map(publicUser) };
       return sendJson(res, 200, out);
     }
     if (p === '/api/admin/fund' && method === 'POST') {
@@ -356,7 +356,7 @@ async function handle(req, res) {
     // investments, goals, orders). It only administers other accounts through
     // /api/admin/* and views data through /api/dashboard and /api/transactions.
     if (me && me.role === 'admin') {
-      const ordinaryBlocked = p === '/api/transfer' || p === '/api/fx/fund' || p === '/api/fx/transfer' || p === '/api/bills/pay' || p.startsWith('/api/cards') || (p === '/api/deposits' && method === 'POST') || p === '/api/investments/buy' || p === '/api/investments/sell' || p === '/api/investments/portfolio' || (p === '/api/goals' && method === 'POST') || (p === '/api/orders' && method === 'POST');
+      const ordinaryBlocked = p === '/api/transfer' || p === '/api/fx/fund' || p === '/api/fx/transfer' || p === '/api/fx/sell' || p === '/api/bills/pay' || p.startsWith('/api/cards') || p.startsWith('/api/beneficiaries') || (p === '/api/deposits' && method === 'POST') || p === '/api/investments/buy' || p === '/api/investments/sell' || p === '/api/investments/portfolio' || (p === '/api/goals' && method === 'POST') || (p === '/api/orders' && method === 'POST');
       if (ordinaryBlocked) return sendJson(res, 403, { ok: false, error: 'admin_no_ordinary' });
     }
 
@@ -372,7 +372,7 @@ async function handle(req, res) {
       addTx({ userId: me.id, type: 'transfer_out', titleAr: 'تحويل إلى ' + to.fullNameAr, titleEn: 'Transfer to ' + (to.fullNameEn || to.fullNameAr), amountSdg: -amount, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: to.fullNameAr, toAccount: to.sdgAccount, ref });
       addTx({ userId: to.id, type: 'transfer_in', titleAr: 'تحويل وارد من ' + me.fullNameAr, titleEn: 'Incoming transfer from ' + (me.fullNameEn || me.fullNameAr), amountSdg: amount, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: to.fullNameAr, toAccount: to.sdgAccount, ref });
       save();
-      return sendJson(res, 200, { ok: true, ref, user: publicUser(me) });
+      return sendJson(res, 200, { ok: true, ref, user: publicUser(me), suggestBeneficiary: suggestBeneficiary(me, to) });
     }
     // ---- security questions + 4-digit transfer PIN ----
     // Answers are stored only as salted hashes (same scrypt scheme as
@@ -461,6 +461,40 @@ async function handle(req, res) {
       save();
       return sendJson(res, 200, { ok: true, user: publicUser(me) });
     }
+    // ---- beneficiaries (user-managed recipients) ----
+    // The recipients lists show ONLY users this user added himself — never
+    // the whole registered directory.
+    function suggestBeneficiary(me, to) {
+      if (!to) return undefined;
+      if ((me.beneficiaries || []).includes(to.id)) return undefined;
+      if ((me.beneficiaryDeclined || []).includes(to.id)) return undefined;
+      const count = db().transactions.filter((t) => t.userId === me.id && (t.type === 'transfer_out' || t.type === 'fx_transfer_out') && (t.toAccount === to.sdgAccount || t.toAccount === to.fxAccount)).length;
+      // "More than three transfers" to the same account: offer on the 4th.
+      if (count <= 3) return undefined;
+      return { userId: to.id, nameAr: to.fullNameAr, nameEn: to.fullNameEn, sdgAccount: to.sdgAccount, fxAccount: to.fxAccount };
+    }
+    if (p === '/api/beneficiaries/add' && method === 'POST') {
+      const u = findBySdg(String(body.account)) || findByFx(String(body.account));
+      if (!u || u.status === 'banned') return sendJson(res, 400, { ok: false, error: 'bad_beneficiary' });
+      if (u.id === me.id) return sendJson(res, 400, { ok: false, error: 'cannot_add_self' });
+      if ((me.beneficiaries || []).includes(u.id)) return sendJson(res, 400, { ok: false, error: 'beneficiary_exists' });
+      if (!me.beneficiaries) me.beneficiaries = [];
+      me.beneficiaries.push(u.id);
+      me.beneficiaryDeclined = (me.beneficiaryDeclined || []).filter((id) => id !== u.id);
+      save();
+      return sendJson(res, 200, { ok: true, beneficiary: publicUser(u) });
+    }
+    if (p === '/api/beneficiaries/remove' && method === 'POST') {
+      me.beneficiaries = (me.beneficiaries || []).filter((id) => id !== Number(body.userId));
+      save();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (p === '/api/beneficiaries/decline' && method === 'POST') {
+      if (!me.beneficiaryDeclined) me.beneficiaryDeclined = [];
+      if (!me.beneficiaryDeclined.includes(Number(body.userId))) me.beneficiaryDeclined.push(Number(body.userId));
+      save();
+      return sendJson(res, 200, { ok: true });
+    }
     if (p === '/api/lookup' && method === 'POST') {
       const u = findBySdg(String(body.account)) || findByFx(String(body.account));
       if (!u) return sendJson(res, 404, { ok: false, error: 'not_found' });
@@ -479,6 +513,21 @@ async function handle(req, res) {
       save();
       return sendJson(res, 200, { ok: true, ref, usdCents, usdRate: USD_RATE, user: publicUser(me) });
     }
+    if (p === '/api/fx/sell' && method === 'POST') {
+      // Convert USD from the FX account back to the SDG account, at the same
+      // demo rate. This is a conversion between the user's own accounts (like
+      // fx/fund in reverse), so no transfer PIN is required.
+      const usdCents = Math.floor(Number(body.amountUsd) * 100);
+      if (!(usdCents > 0)) return sendJson(res, 400, { ok: false, error: 'bad_amount' });
+      if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
+      if (me.fxBalanceCents < usdCents) return sendJson(res, 400, { ok: false, error: 'insufficient_fx' });
+      const sdgAmount = usdCents * (USD_RATE / 100);
+      const ref = dbmod.refFor(db().nextTxSeq);
+      me.fxBalanceCents -= usdCents; me.sdgBalance += sdgAmount;
+      addTx({ userId: me.id, type: 'fx_sell', titleAr: `تحويل من الحساب الأجنبي إلى حساب الجنيه — ${(usdCents / 100).toFixed(2)} USD ← ${sdgAmount} ج.س (سعر ${USD_RATE})`, titleEn: `Convert FX account to SDG account — ${(usdCents / 100).toFixed(2)} USD → ${sdgAmount} SDG (rate ${USD_RATE})`, amountSdg: sdgAmount, amountUsdCents: -usdCents, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: me.fullNameAr, toAccount: me.sdgAccount, ref });
+      save();
+      return sendJson(res, 200, { ok: true, ref, sdgAmount, user: publicUser(me) });
+    }
     if (p === '/api/fx/transfer' && method === 'POST') {
       const to = findByFx(String(body.toFxAccount));
       const usdCents = Math.floor(Number(body.amountUsd) * 100);
@@ -491,7 +540,7 @@ async function handle(req, res) {
       addTx({ userId: me.id, type: 'fx_transfer_out', titleAr: 'تحويل أجنبي إلى ' + to.fullNameAr, titleEn: 'FX transfer to ' + (to.fullNameEn || to.fullNameAr), amountUsdCents: -usdCents, currency: 'USD', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: to.fullNameAr, toAccount: to.fxAccount, ref });
       addTx({ userId: to.id, type: 'fx_transfer_in', titleAr: 'تحويل أجنبي وارد من ' + me.fullNameAr, titleEn: 'Incoming FX transfer from ' + (me.fullNameEn || me.fullNameAr), amountUsdCents: usdCents, currency: 'USD', fromName: me.fullNameAr, fromAccount: me.fxAccount, toName: to.fullNameAr, toAccount: to.fxAccount, ref });
       save();
-      return sendJson(res, 200, { ok: true, ref, user: publicUser(me) });
+      return sendJson(res, 200, { ok: true, ref, user: publicUser(me), suggestBeneficiary: suggestBeneficiary(me, to) });
     }
     if (p === '/api/transactions' && method === 'GET') {
       const d = db();

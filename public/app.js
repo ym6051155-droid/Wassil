@@ -159,7 +159,7 @@ function onQrScanned(data){
   try { const u = new URL(s); to = u.searchParams.get('to') || ''; } catch {}
   if (!to && /^\d{4}$/.test(s)) to = s;
   if (to) { window._pendingTo = to; toast(lang === 'en' ? 'QR scanned — opening transfer' : 'تم مسح الرمز — فتح التحويل'); go(me ? 'transfer' : 'login'); return; }
-  toast(lang === 'en' ? 'This QR is not a Wassil transfer code.' : 'هذا الرمز ليس رمز تحويل وصل.');
+  toast(lang === 'en' ? 'This QR is not a Wassil transfer code.' : 'هذا الرمز ليس رمز تحويل وصل.', 'err');
 }
 function durationLabel(days){
   const d = Number(days);
@@ -173,7 +173,7 @@ function getDeviceId(){ let id = localStorage.getItem('wassil-device-id'); if (!
 const app = () => document.getElementById('app');
 function t(k){ const v = I18N[k]; return v ? (lang === 'en' ? v.en : v.ar) : k; }
 function nameOf(u){ return lang === 'en' && u && u.fullNameEn ? u.fullNameEn : (u ? u.fullNameAr : ''); }
-function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'), 3000); }
+function toast(msg, kind){ const el = $('#toast'); el.textContent = msg; el.classList.toggle('err', kind === 'err'); el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'), 3000); }
 const SECURITY_QUESTIONS = [
   { id: 'school', ar: 'ما اسم مدرستك الابتدائية؟', en: 'What was your primary school?' },
   { id: 'pet', ar: 'ما اسم أول حيوان أليف لك؟', en: "What was your first pet's name?" },
@@ -194,6 +194,9 @@ function friendlyErr(m){
     bad_proof: lang === 'en' ? 'Current PIN or password is wrong' : 'رمز PIN الحالي أو كلمة المرور غير صحيحة',
     bad_password: lang === 'en' ? 'Password is wrong' : 'كلمة المرور غير صحيحة',
     bad_pin: lang === 'en' ? 'PIN must be exactly 4 digits' : 'رمز PIN يجب أن يكون 4 أرقام بالضبط',
+    bad_beneficiary: lang === 'en' ? 'Account not found' : 'الحساب غير موجود',
+    cannot_add_self: lang === 'en' ? 'You cannot add yourself' : 'لا يمكنك إضافة نفسك',
+    beneficiary_exists: lang === 'en' ? 'Already a beneficiary' : 'مضاف بالفعل كمستفيد',
   };
   return map[m] || m;
 }
@@ -382,7 +385,7 @@ function accountView(){
   <button class="logout-btn" onclick="doLogout()">${t('logout')}</button>
   `;
   const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
-  const others = (dash?.directory || []).filter(u => u.id !== me.id);
+  const others = (dash?.beneficiaries || []).filter(u => u.id !== me.id);
   const ben = others.map(u => `<button type="button" class="menu-row" onclick="go('transfer')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet' : 'لا يوجد مستفيدون بعد'}</p>`;
   return `<div class="page-title">${t('myAccount')}</div>
   <div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc(letter)}</div><div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${me.role === 'admin' ? (lang === 'en' ? 'Admin account — Wassil' : 'حساب الأدمن — وصل') : t('demoClient')}</div></div></div>
@@ -493,7 +496,7 @@ async function downloadStatementPdf(){
     a.download = 'wassil-statement-' + String(me?.sdgAccount || 'account').replace(/[\s-]/g, '') + '.pdf'; a.click();
     toast(lang === 'en' ? 'Statement PDF downloaded' : 'تم تنزيل الكشف PDF');
   } catch (e) {
-    toast(lang === 'en' ? 'PDF failed, try the text download' : 'تعذر إنشاء PDF، جرب تنزيل النص');
+    toast(lang === 'en' ? 'PDF failed, try the text download' : 'تعذر إنشاء PDF، جرب تنزيل النص', 'err');
   }
 }
 function qrView(){
@@ -540,10 +543,34 @@ function calcLoan(){
   const total = p * (1 + 0.10 * m / 12); const monthly = total / m;
   $('#loan-out').textContent = (lang === 'en' ? 'Total: ' : 'الإجمالي: ') + moneySdg(Math.round(total)) + ' — ' + (lang === 'en' ? 'Monthly: ' : 'القسط الشهري: ') + moneySdg(Math.round(monthly));
 }
+function beneficiariesBlock(){
+  const bens = dash?.beneficiaries || [];
+  const rows = bens.map(u => `<div class="menu-row"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')} · ${esc(u.fxAccount || '')}</span></span><button type="button" class="link-btn" onclick="doBenRemove(${u.id})">${lang === 'en' ? 'Remove' : 'حذف'}</button></div>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet — add someone below and they will appear here.' : 'لا يوجد مستفيدون بعد — أضف شخصاً بالأسفل وسيظهر هنا.'}</p>`;
+  return `<div class="page-title" style="font-size:18px">${lang === 'en' ? 'Manage beneficiaries' : 'إدارة المستفيدين'}</div><div class="card">${rows}<label>${lang === 'en' ? 'Account number (SDG or FX)' : 'رقم الحساب (جنيه أو أجنبي)'}</label><input id="ben-acct" placeholder="1002"><button class="btn secondary" onclick="doBenLookup()">${lang === 'en' ? 'Check' : 'تحقق'}</button><div id="ben-lookup" class="muted"></div><div id="ben-err" class="err"></div></div>`;
+}
+async function doBenLookup(){
+  const acct = $('#ben-acct').value.trim();
+  try { const j = await api('/api/lookup', { method:'POST', body: JSON.stringify({ account: acct }) }); window._benCandidate = acct; $('#ben-lookup').innerHTML = `${esc(lang === 'en' ? (j.nameEn || j.nameAr) : j.nameAr)} — <button type="button" class="btn" onclick="doBenAdd()">${lang === 'en' ? 'Add beneficiary' : 'إضافة كمستفيد'}</button>`; }
+  catch(e){ $('#ben-err').textContent = lang === 'en' ? 'Account not found' : 'الحساب غير موجود'; }
+}
+async function doBenAdd(){
+  try { await api('/api/beneficiaries/add', { method:'POST', body: JSON.stringify({ account: window._benCandidate }) }); toast(lang === 'en' ? 'Beneficiary added' : 'تمت إضافة المستفيد'); await loadDash(); render(); }
+  catch(e){ $('#ben-err').textContent = friendlyErr(e.message); }
+}
+async function doBenRemove(id){
+  await api('/api/beneficiaries/remove', { method:'POST', body: JSON.stringify({ userId: id }) }); await loadDash(); render();
+}
+async function maybeSuggestBeneficiary(j){
+  const sg = j?.suggestBeneficiary; if (!sg) return;
+  const name = lang === 'en' ? (sg.nameEn || sg.nameAr) : sg.nameAr;
+  const ok = await confirmSheet({ title: lang === 'en' ? 'Add to beneficiaries?' : 'إضافة إلى المستفيدين؟', lines: [[lang === 'en' ? 'Account' : 'الحساب', name + ' — ' + (sg.sdgAccount || sg.fxAccount)], [lang === 'en' ? 'Note' : 'ملاحظة', lang === 'en' ? 'You have transferred to this account more than 3 times.' : 'لقد حوّلت إلى هذا الحساب أكثر من 3 مرات.']], confirmLabel: lang === 'en' ? 'Agree' : 'موافقة' });
+  if (ok) { try { await api('/api/beneficiaries/add', { method:'POST', body: JSON.stringify({ account: sg.sdgAccount }) }); toast(lang === 'en' ? 'Beneficiary added' : 'تمت إضافة المستفيد'); await loadDash(); } catch(e){} }
+  else { try { await api('/api/beneficiaries/decline', { method:'POST', body: JSON.stringify({ userId: sg.userId }) }); } catch(e){} }
+}
 function transferView(){
-  const others = (dash?.directory || []).filter(u => u.id !== me?.id);
+  const others = (dash?.beneficiaries || []).filter(u => u.id !== me?.id);
   const opts = others.map(u => `<option value="${esc(u.sdgAccount || '')}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
-  const list = others.map(u => `<button type="button" class="menu-row" onclick="pickTransferUser('${esc(u.sdgAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No registered users yet' : 'لا يوجد مستخدمون مسجلون بعد'}</p>`;
+  const list = others.map(u => `<button type="button" class="menu-row" onclick="pickTransferUser('${esc(u.sdgAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet — add one below.' : 'لا يوجد مستفيدون بعد — أضف واحداً بالأسفل.'}</p>`;
   return `<div class="page-title">${t('transferTitle')}</div>
   <div class="card">
   <label>${t('beneficiary')}</label>
@@ -555,8 +582,8 @@ function transferView(){
   <button class="btn" onclick="doTransfer()">${t('review')}</button><div id="tr-err" class="err"></div>
   ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre so every transfer asks for confirmation.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان ليطلب منك تأكيد كل تحويل.'} <button type="button" class="link-btn" onclick="go('security')">${lang === 'en' ? 'Security Centre' : 'مركز الأمان'}</button></p>` : ''}
   <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>
-  <div class="tabs"><button type="button" class="tab-btn ${transferTab === 'users' ? 'active' : ''}" onclick="setTransferTab('users')">${t('registeredUsers')}</button><button type="button" class="tab-btn ${transferTab === 'saved' ? 'active' : ''}" onclick="setTransferTab('saved')">${t('savedBeneficiaries')}</button></div>
-  <div class="card">${list}</div>`;
+  <div class="tabs"><button type="button" class="tab-btn ${transferTab === 'users' ? 'active' : ''}" onclick="setTransferTab('users')">${lang === 'en' ? 'Beneficiaries' : 'المستفيدون'}</button><button type="button" class="tab-btn ${transferTab === 'saved' ? 'active' : ''}" onclick="setTransferTab('saved')">${t('savedBeneficiaries')}</button></div>
+  <div class="card">${list}</div>${beneficiariesBlock()}`;
 }
 function onTransferUserChange(v){
   const inp = $('#tr-to'); if (!inp) return;
@@ -567,7 +594,7 @@ function pickTransferUser(acct){ const sel = $('#tr-user-select'); if (sel) sel.
 function setTransferTab(tab){ transferTab = tab; render(); }
 function fxView(){
   if (!me) return loginView();
-  const others = (dash?.directory || []).filter(u => u.id !== me.id);
+  const others = (dash?.beneficiaries || []).filter(u => u.id !== me.id);
   const users = others.map(u => `<button type="button" class="menu-row" onclick="pickFxUser('${esc(u.fxAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${lang === 'en' ? 'FX account: ' : 'رقم الحساب الأجنبي: '}${esc(u.fxAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">—</p>`;
   const fxTxs = (dash?.transactions || []).filter(tx => (tx.type || '').startsWith('fx_'));
   const fxRows = fxTxs.map(opRow).join('') || `<p class="muted">—</p>`;
@@ -577,6 +604,8 @@ function fxView(){
   <label>${t('amountUsd')}</label><input id="fx-usd" type="number" step="0.01" min="0.01">
   <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button>
   ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان.'}</p>` : ''}</div>` : '';
+  const sellForm = fxAction === 'sell' ? `<div class="card"><h3>${lang === 'en' ? 'Convert to SDG' : 'تحويل إلى الجنيه'}</h3><p class="muted">${lang === 'en' ? 'Same rate as funding: 1 USD = ' : 'بنفس سعر الشحن: 1 دولار = '}${dash?.usdRate || 10000} ${lang === 'en' ? 'SDG' : 'ج.س'}</p><label>${t('amountUsd')}</label><input id="fx-sell-usd" type="number" step="0.01" min="0.01">
+  <button class="btn" onclick="doFxSell()">${lang === 'en' ? 'Convert to SDG' : 'تحويل إلى الجنيه'}</button></div>` : '';
   return `${backLink(t('backServices'), 'services')}
   <div class="page-title">${t('fx')}</div>
   <div class="balance"><div class="balance-top"><span>${lang === 'en' ? 'FX account (USD)' : 'الحساب الأجنبي (USD)'}</span></div>
@@ -586,11 +615,12 @@ function fxView(){
   <div class="action-row">
     <button type="button" class="action-btn ${fxAction === 'fund' ? 'active' : ''}" onclick="setFxAction('fund')"><span class="action-ic">${IC.dollar}</span>${t('fundFxShort')}</button>
     <button type="button" class="action-btn ${fxAction === 'transfer' ? 'active' : ''}" onclick="setFxAction('transfer')"><span class="action-ic">${IC.transfer}</span>${t('fxTransferShort')}</button>
+    <button type="button" class="action-btn ${fxAction === 'sell' ? 'active' : ''}" onclick="setFxAction('sell')"><span class="action-ic">${IC.bank}</span>${lang === 'en' ? 'To SDG' : 'إلى الجنيه'}</button>
     <button type="button" class="action-btn" onclick="go('cardTopup')"><span class="action-ic">${IC.card}</span>${t('topupFromFx')}</button>
   </div>
-  ${fundForm}${transferForm}<div id="fx-err" class="err"></div>
-  <div class="page-title" style="font-size:18px">${t('registeredUsers')}</div>
-  <div class="card">${users}</div>
+  ${fundForm}${transferForm}${sellForm}<div id="fx-err" class="err"></div>
+  <div class="page-title" style="font-size:18px">${lang === 'en' ? 'Beneficiaries' : 'المستفيدون'}</div>
+  <div class="card">${users}</div>${beneficiariesBlock()}
   <div class="page-title" style="font-size:18px">${t('fxHistory')}</div>
   <div class="card">${fxRows}</div>`;
 }
@@ -645,7 +675,7 @@ async function doCardTransfer(){
   if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD']] }))) return;
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
-  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt, pin }) }); toast('OK — ' + j.ref); await loadDash(); openCard(from); }
+  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt, pin }) }); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j.ref); await loadDash(); openCard(from); }
   catch(e){ const el = $('#cc-err'); if (el) el.textContent = friendlyErr(e.message); }
 }
 function cardsView(){
@@ -761,7 +791,7 @@ let adminSearch = '';
 function normAcctJs(s){ return String(s || '').replace(/[\s-]/g, ''); }
 function adminView(){
   const all = dash?.allUsers || [];
-  const active = (dash?.directory || []);
+  const active = (dash?.allUsers || []).filter(u => u.status === 'active');
   const opts = active.map(u => `<option value="${u.id}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
   const shown = adminSearch ? all.filter(u => normAcctJs(u.sdgAccount) === normAcctJs(adminSearch) || normAcctJs(u.fxAccount) === normAcctJs(adminSearch) || String(u.email || '').toLowerCase().includes(String(adminSearch).toLowerCase())) : all;
   const users = shown.map(u =>
@@ -869,6 +899,8 @@ function policiesView(){
     lang === 'en' ? 'The admin account is not an ordinary user account: it cannot transfer, pay bills or hold cards. It funds user accounts in SDG and USD (unlimited), freezes a specific amount or all assets, unbans only with admin approval, bans users, and stops or restarts user cards. A banned account cannot log in; a frozen amount cannot be spent until the admin releases it. Fingerprint login is real device biometrics (WebAuthn) enrolled after password login; password login always remains as fallback.' : 'حساب الأدمن ليس حساب مستخدم عادياً: لا يحوّل ولا يدفع فواتير ولا يملك بطاقات. يموّل حسابات المستخدمين بالجنيه والدولار (من غير حد)، ويجمّد مبلغاً معيناً أو كل الأصول، ولا يُعاد فتح الحساب إلا بموافقة الأدمن، ويحظر المستخدمين، ويوقف بطاقاتهم أو يعيد تشغيلها. الحساب المحظور لا يستطيع الدخول، والمبلغ المجمّد لا يُصرف حتى يفكّه الأدمن. دخول البصمة بصمة جهاز حقيقية (WebAuthn) تُسجّل بعد دخول كلمة المرور؛ ودخول كلمة المرور يبقى دائماً كبديل.')}
   ${sec(lang === 'en' ? '8 — Security questions and transfer PIN' : '٨ — أسئلة الأمان ورمز PIN للتحويل',
     lang === 'en' ? 'In the Security Centre you can set two security questions and a 4-digit transfer PIN. Once a PIN is set, every SDG, FX and card-to-card transfer asks for it after the review screen, and the transfer is rejected without the correct PIN. After 5 wrong PIN attempts, PIN checks lock for 5 minutes. Change the PIN in the Security Centre with your current PIN or your password. If you forget your password or PIN, use "Forgot password?" on the login screen and answer your security questions to reset either or both — but only if you set the questions before forgetting. Answers are stored hashed and are never shown.' : 'في مركز الأمان يمكنك ضبط سؤالين للأمان ورمز PIN للتحويل من 4 أرقام. بعد ضبط الرمز، كل تحويل بالجنيه أو الأجنبي أو من بطاقة إلى بطاقة يطلب الرمز بعد شاشة المراجعة، ويُرفض التحويل من دون الرمز الصحيح. بعد 5 محاولات خاطئة، يُقفل التحقق بالـ PIN لمدة 5 دقائق. غيّر الرمز من مركز الأمان برمز PIN الحالي أو بكلمة المرور. إذا نسيت كلمة المرور أو الرمز، استخدم "نسيت كلمة المرور؟" في شاشة الدخول وأجب على أسئلة الأمان لإعادة تعيين أحدهما أو كليهما — لكن فقط إذا ضبطت الأسئلة قبل النسيان. الإجابات محفوظة مشفرة ولا تظهر أبداً.')}
+  ${sec(lang === 'en' ? '9 — FX conversion and beneficiaries' : '٩ — التحويل الأجنبي والمستفيدون',
+    lang === 'en' ? 'You can convert USD from your FX account back to your SDG account at the same rate (1 USD = 10,000 SDG). Recipient lists show only beneficiaries you added yourself — never all registered users. Add a beneficiary from the transfer or FX screen by account number, after checking the name. After more than 3 transfers to the same account, the app offers to add that account to your beneficiaries; pressing Agree adds it, declining means it will not be offered again for that account.' : 'يمكنك تحويل الدولار من حسابك الأجنبي إلى حساب الجنيه بنفس السعر (1 دولار = 10,000 ج.س). قوائم المستلمين تعرض فقط المستفيدين الذين أضفتهم بنفسك — وليس كل المستخدمين المسجلين. أضف مستفيداً من شاشة التحويل أو الأجنبي برقم الحساب بعد التحقق من الاسم. بعد أكثر من 3 تحويلات لنفس الحساب، يعرض التطبيق إضافة ذلك الحساب إلى مستفيديك؛ الضغط على موافقة يضيفه، والرفض يعني أنه لن يُعرض مجدداً لذلك الحساب.')}
   ${agreed ? `<button class="btn" onclick="agreePolicy()">${lang === 'en' ? 'Already agreed — continue' : 'تمت الموافقة سابقاً — متابعة'}</button>` : `<p class="muted" id="policy-timer">${lang === 'en' ? 'Read the policy — the agree button activates after 10 seconds.' : 'اقرأ السياسة — زر الموافقة يتفعل بعد 10 ثواني.'}</p><button class="btn" id="policy-agree-btn" disabled onclick="agreePolicy()"><span id="policy-check" style="opacity:.35">○</span> ${lang === 'en' ? 'I agree to the site policy' : 'موافق على سياسة الموقع'}</button>`}
   <p class="muted">${lang === 'en' ? 'Agreeing means you understood this is a demo with fake money, not a real bank.' : 'الموافقة تعني أنك فهمت أن هذا نموذج تجريبي بأموال وهمية، وليس بنكاً حقيقياً.'}</p>`;
 }
@@ -993,11 +1025,18 @@ async function doTransfer(){
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
   try { await loadDash(); const j = await api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt, pin }) });
-    toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#tr-err').textContent = friendlyErr(e.message); }
+    toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); } catch(e){ $('#tr-err').textContent = friendlyErr(e.message); }
 }
 async function doFxFund(){
   try { const j = await api('/api/fx/fund', { method:'POST', body: JSON.stringify({ amountSdg: $('#fx-amt').value }) });
     toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#fx-err').textContent = e.message; }
+}
+async function doFxSell(){
+  const amt = $('#fx-sell-usd').value;
+  if (!(Number(amt) > 0)) { $('#fx-err').textContent = lang === 'en' ? 'Enter an amount' : 'أدخل المبلغ'; return; }
+  const rate = dash?.usdRate || 10000; const sdg = Math.floor(Number(amt) * rate);
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Review conversion' : 'مراجعة التحويل', lines: [[lang === 'en' ? 'From FX' : 'من الأجنبي', amt + ' USD'], [lang === 'en' ? 'To SDG' : 'إلى الجنيه', sdg + ' SDG']], confirmLabel: lang === 'en' ? 'Confirm conversion' : 'تأكيد التحويل' }))) return;
+  try { const j = await api('/api/fx/sell', { method:'POST', body: JSON.stringify({ amountUsd: amt }) }); toast((lang === 'en' ? 'Converted successfully — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); go('home'); } catch(e){ $('#fx-err').textContent = friendlyErr(e.message); }
 }
 async function doFxTransfer(){
   const to = $('#fx-to').value, amt = $('#fx-usd').value;
@@ -1005,17 +1044,17 @@ async function doFxTransfer(){
   let pin = '';
   if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
   try { const j = await api('/api/fx/transfer', { method:'POST', body: JSON.stringify({ toFxAccount: to, amountUsd: amt, pin }) });
-    toast('OK — ' + j.ref); await loadDash(); go('home'); } catch(e){ $('#fx-err').textContent = friendlyErr(e.message); }
+    toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); } catch(e){ $('#fx-err').textContent = friendlyErr(e.message); }
 }
 async function requestCard(){
-  try { const j = await api('/api/cards/request', { method:'POST', body: '{}' }); toast('Card requested / تم طلب البطاقة'); await loadDash(); go('cards'); }
+  try { const j = await api('/api/cards/request', { method:'POST', body: '{}' }); toast(lang === 'en' ? 'Card requested successfully' : 'تم طلب البطاقة بنجاح'); await loadDash(); go('cards'); }
   catch(e){ $('#cd-err').textContent = e.message; }
 }
 async function openCard(id){
-  try { const j = await api('/api/cards/' + id); selCard = { ...j.card, history: j.history }; go('cardPage'); } catch(e){ toast(e.message); }
+  try { const j = await api('/api/cards/' + id); selCard = { ...j.card, history: j.history }; go('cardPage'); } catch(e){ toast(e.message, 'err'); }
 }
 async function openTx(id){
-  try { const j = await api('/api/transactions/' + id); selTx = j.transaction; go('receipt'); } catch(e){ toast(e.message); }
+  try { const j = await api('/api/transactions/' + id); selTx = j.transaction; go('receipt'); } catch(e){ toast(e.message, 'err'); }
 }
 async function toggleEye(){
   const el = $('#cardDetails');
@@ -1023,22 +1062,22 @@ async function toggleEye(){
   try { const j = await api('/api/cards/' + selCard.id + '/details');
     el.innerHTML = `<p>${t('viewDetails')}: ${esc(j.fullNumber)} — ${esc(j.exp)} — CVV ${esc(j.cvv)} — ${esc(lang==='en' ? j.holderEn : j.holderAr)}</p>
     <button class="btn small" onclick="copyCardNum('${esc(j.fullNumber)}')">${t('copyNum')}</button>`;
-    el.classList.remove('hidden'); } catch(e){ toast(e.message); }
+    el.classList.remove('hidden'); } catch(e){ toast(e.message, 'err'); }
 }
 async function copyCardNum(num){
   try { await navigator.clipboard.writeText(num); } catch { const ta = document.createElement('textarea'); ta.value = num; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
   toast(t('copied'));
 }
-async function freezeCard(){ try { const j = await api('/api/cards/' + selCard.id + '/freeze', { method:'POST', body:'{}' }); selCard = { ...j.card, history: selCard.history }; render(); } catch(e){ toast(e.message); } }
-async function unfreezeCard(){ try { const j = await api('/api/cards/' + selCard.id + '/unfreeze', { method:'POST', body:'{}' }); selCard = { ...j.card, history: selCard.history }; render(); } catch(e){ toast(e.message); } }
+async function freezeCard(){ try { const j = await api('/api/cards/' + selCard.id + '/freeze', { method:'POST', body:'{}' }); selCard = { ...j.card, history: selCard.history }; render(); } catch(e){ toast(e.message, 'err'); } }
+async function unfreezeCard(){ try { const j = await api('/api/cards/' + selCard.id + '/unfreeze', { method:'POST', body:'{}' }); selCard = { ...j.card, history: selCard.history }; render(); } catch(e){ toast(e.message, 'err'); } }
 async function cancelCard(){
   if (!(await confirmSheet({ title: t('cancelCard'), note: '100,000 SDG issuance fee is NON-REFUNDABLE and final. Any remaining USD balance stays locked on the cancelled card and does not return to the account. / رسوم الإصدار 100,000 جنيه غير مستردة ونهائية، وأي رصيد دولار متبقٍّ يبقى مقفلاً على البطاقة الملغاة ولا يعود للحساب.', confirmLabel: t('cancelCard'), danger: true }))) return;
-  try { const j = await api('/api/cards/' + selCard.id + '/cancel', { method:'POST', body:'{}' }); toast(j.noteAr || 'Cancelled'); await loadDash(); go('cards'); } catch(e){ toast(e.message); }
+  try { const j = await api('/api/cards/' + selCard.id + '/cancel', { method:'POST', body:'{}' }); toast(j.noteAr || 'Cancelled'); await loadDash(); go('cards'); } catch(e){ toast(e.message, 'err'); }
 }
 async function changeCvv(){
   const pw = prompt(t('password')); const nv = prompt('New CVV (3 digits) / رمز CVV الجديد (3 أرقام)');
   if (!pw || !nv) return;
-  try { await api('/api/cards/' + selCard.id + '/change-cvv', { method:'POST', body: JSON.stringify({ password: pw, newCvv: nv }) }); toast('OK'); } catch(e){ toast(e.message); }
+  try { await api('/api/cards/' + selCard.id + '/change-cvv', { method:'POST', body: JSON.stringify({ password: pw, newCvv: nv }) }); toast('OK'); } catch(e){ toast(e.message, 'err'); }
 }
 async function topupCard(){
   const amt = prompt('Amount in USD (from FX account only) / المبلغ بالدولار (من الحساب الأجنبي فقط)');
@@ -1048,12 +1087,12 @@ async function topupCard(){
 async function cardTransfer(){
   const to = prompt('Recipient card number (full) / رقم بطاقة المستلم كاملاً'); const amt = prompt('Amount in USD / المبلغ بالدولار');
   if (!to || !amt) return;
-  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: selCard.id, toCardNumber: to, amountUsd: amt }) }); toast('OK — ' + j.ref); await loadDash(); openCard(selCard.id); } catch(e){ toast(e.message); }
+  try { const j = await api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: selCard.id, toCardNumber: to, amountUsd: amt }) }); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j.ref); await loadDash(); openCard(selCard.id); } catch(e){ toast(e.message, 'err'); }
 }
 async function changeLimit(){
   const lim = prompt('New daily limit in USD / الحد اليومي الجديد بالدولار');
   if (!lim) return;
-  try { await api('/api/cards/' + selCard.id + '/limit', { method:'POST', body: JSON.stringify({ dailyLimitUsd: lim }) }); toast('OK'); } catch(e){ toast(e.message); }
+  try { await api('/api/cards/' + selCard.id + '/limit', { method:'POST', body: JSON.stringify({ dailyLimitUsd: lim }) }); toast('OK'); } catch(e){ toast(e.message, 'err'); }
 }
 async function doDeposit(){
   try { const j = await api('/api/deposits', { method:'POST', body: JSON.stringify({ principal: $('#dp-amt').value, durationDays: $('#dp-days').value }) });
@@ -1068,15 +1107,15 @@ async function loadInvest(){
 }
 async function buyAsset(id){
   const q = prompt('Quantity / الكمية'); if (!q) return;
-  try { await api('/api/investments/buy', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message); }
+  try { await api('/api/investments/buy', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message, 'err'); }
 }
 async function sellAsset(id){
   const q = prompt('Quantity / الكمية'); if (!q) return;
-  try { await api('/api/investments/sell', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message); }
+  try { await api('/api/investments/sell', { method:'POST', body: JSON.stringify({ assetId: id, quantity: q }) }); toast('OK'); await loadDash(); loadInvest(); } catch(e){ toast(e.message, 'err'); }
 }
 function adminResolveByNumber(num){
   const n = normAcctJs(num);
-  const pool = (dash?.allUsers || []).concat(dash?.directory || []);
+  const pool = (dash?.allUsers || []);
   const u = pool.find(x => normAcctJs(x.sdgAccount) === n || normAcctJs(x.fxAccount) === n);
   return u ? u.id : '';
 }
@@ -1087,7 +1126,7 @@ async function adminFund(){
   try { await api('/api/admin/fund', { method:'POST', body: JSON.stringify({ targetUserId: target, amount: $('#ad-amt').value }) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ $('#ad-err').textContent = e.message; }
 }
 async function adminAction(path, body){
-  try { await api(path, { method:'POST', body: JSON.stringify(body) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ const el = $('#ad-err'); if (el) el.textContent = e.message; else toast(e.message); }
+  try { await api(path, { method:'POST', body: JSON.stringify(body) }); toast('OK'); await loadDash(); go('admin'); } catch(e){ const el = $('#ad-err'); if (el) el.textContent = e.message; else toast(e.message, 'err'); }
 }
 async function adminFreeze(id){ const el = document.getElementById('fz-' + id); await adminAction('/api/admin/freeze', { targetUserId: id, amountSdg: el ? el.value : 0 }); }
 async function adminFreezeAll(id){ await adminAction('/api/admin/freeze-all', { targetUserId: id }); }
@@ -1105,15 +1144,15 @@ async function adminUnban(id){ await adminAction('/api/admin/unban', { targetUse
 async function loadBills(){
   try { const j = await api('/api/bills'); $('#bills-list').innerHTML = j.bills.map(b => `<div class="row"><span>${lang==='en'?b.nameEn:b.nameAr} — ${b.amountSdg}</span><button class="btn small" onclick="payBill('${b.id}')">Pay / دفع</button></div>`).join(''); } catch {}
 }
-async function payBill(id){ try { await api('/api/bills/pay', { method:'POST', body: JSON.stringify({ billId: id }) }); toast('OK'); await loadDash(); } catch(e){ toast(e.message); } }
+async function payBill(id){ try { await api('/api/bills/pay', { method:'POST', body: JSON.stringify({ billId: id }) }); toast('OK'); await loadDash(); } catch(e){ toast(e.message, 'err'); } }
 async function loadGoals(){
   try { const j = await api('/api/goals'); $('#goals-list').innerHTML = j.goals.map(g => `<div class="row"><span>${esc(g.name)} — ${g.savedSdg}/${g.targetSdg}</span></div>`).join(''); } catch {}
 }
-async function addGoal(){ try { await api('/api/goals', { method:'POST', body: JSON.stringify({ name: $('#goal-name').value, targetSdg: $('#goal-tgt').value }) }); loadGoals(); } catch(e){ toast(e.message); } }
+async function addGoal(){ try { await api('/api/goals', { method:'POST', body: JSON.stringify({ name: $('#goal-name').value, targetSdg: $('#goal-tgt').value }) }); loadGoals(); } catch(e){ toast(e.message, 'err'); } }
 async function loadOrders(){
   try { const j = await api('/api/orders'); $('#orders-list').innerHTML = j.orders.map(o => `<div class="row"><span>${esc(o.toAccount)} — ${o.amountSdg}</span></div>`).join(''); } catch {}
 }
-async function addOrder(){ try { await api('/api/orders', { method:'POST', body: JSON.stringify({ toAccount: $('#ord-to').value, amountSdg: $('#ord-amt').value, frequency: 'monthly' }) }); loadOrders(); } catch(e){ toast(e.message); } }
+async function addOrder(){ try { await api('/api/orders', { method:'POST', body: JSON.stringify({ toAccount: $('#ord-to').value, amountSdg: $('#ord-amt').value, frequency: 'monthly' }) }); loadOrders(); } catch(e){ toast(e.message, 'err'); } }
 async function loadBranches(){
   try { const j = await api('/api/branches'); $('#branches-list').innerHTML = j.branches.map(b => `<div class="row"><span>${lang==='en'?b.nameEn:b.nameAr} — ${lang==='en'?b.cityEn:b.cityAr}</span></div>`).join(''); } catch {}
 }
@@ -1146,7 +1185,7 @@ async function doSavePin(){
     $('#pin-ok').textContent = lang === 'en' ? 'PIN saved' : 'تم حفظ رمز PIN'; await loadDash(); render();
   } catch(e){ $('#pin-err').textContent = friendlyErr(e.message); }
 }
-async function disableFp(){ try { await api('/api/webauthn/disable', { method:'POST', body:'{}' }); toast('Disabled / تم الإلغاء'); } catch(e){ toast(e.message); } }
+async function disableFp(){ try { await api('/api/webauthn/disable', { method:'POST', body:'{}' }); toast('Disabled / تم الإلغاء'); } catch(e){ toast(e.message, 'err'); } }
 async function doFpLogin(){
   try {
     const email = $('#li-email').value;
