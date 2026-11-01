@@ -258,3 +258,5 @@ input:focus,select:focus{outline:2px solid var(--teal2);outline-offset:0;border-
 .flt-row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .flt-btn{background:#f1f5f9;color:#334155;border:1.5px solid #e2e8f0;border-radius:999px;padding:9px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
 .flt-btn.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.avatar-lg{width:56px;height:56px;flex:0 0 56px;border-radius:16px;object-fit:cover}
+.avatar-sm{width:36px;height:36px;flex:0 0 36px;border-radius:50%;object-fit:cover}

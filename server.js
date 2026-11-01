@@ -419,7 +419,7 @@ async function handle(req, res) {
     // investments, goals, orders). It only administers other accounts through
     // /api/admin/* and views data through /api/dashboard and /api/transactions.
     if (me && me.role === 'admin') {
-      const ordinaryBlocked = p === '/api/transfer' || p === '/api/fx/fund' || p === '/api/fx/transfer' || p === '/api/fx/sell' || p === '/api/bills/pay' || p.startsWith('/api/cards') || p.startsWith('/api/beneficiaries') || (p === '/api/deposits' && method === 'POST') || p === '/api/investments/buy' || p === '/api/investments/sell' || p === '/api/investments/portfolio' || (p === '/api/goals' && method === 'POST') || (p === '/api/orders' && method === 'POST');
+      const ordinaryBlocked = p === '/api/transfer' || p === '/api/fx/fund' || p === '/api/fx/transfer' || p === '/api/fx/sell' || p === '/api/bills/pay' || p.startsWith('/api/cards') || p.startsWith('/api/beneficiaries') || (p === '/api/deposits' && method === 'POST') || p === '/api/deposits/cancel' || p === '/api/investments/buy' || p === '/api/investments/sell' || p === '/api/investments/portfolio' || (p === '/api/goals' && method === 'POST') || (p === '/api/orders' && method === 'POST');
       if (ordinaryBlocked) return sendJson(res, 403, { ok: false, error: 'admin_no_ordinary' });
     }
 
@@ -459,9 +459,10 @@ async function handle(req, res) {
       });
     }
     function checkPin(user, pin, res) {
-      // No PIN set yet: transfers proceed as before (the app nudges the user
-      // to set a PIN from the Security Centre). Once set, it is enforced.
-      if (!user.pinHash) return true;
+      // PIN is mandatory for every payment: with no PIN set the payment
+      // cannot proceed at all (the payment flow forces setup first, with
+      // no skip). The 5-wrong-attempts / 5-minute lock below is unchanged.
+      if (!user.pinHash) { sendJson(res, 400, { ok: false, error: 'pin_not_set' }); return false; }
       if (user.pinLockedUntil && Date.now() < user.pinLockedUntil) { sendJson(res, 403, { ok: false, error: 'pin_locked' }); return false; }
       if (!pin) { sendJson(res, 400, { ok: false, error: 'pin_required' }); return false; }
       if (!verifyPassword(String(pin), user.pinHash)) {
@@ -523,6 +524,14 @@ async function handle(req, res) {
       if (!byPin && !byPassword) return sendJson(res, 400, { ok: false, error: 'bad_proof' });
       me.pinHash = hashPassword(String(body.newPin)); me.pinFailCount = 0; me.pinLockedUntil = 0;
       save();
+      return sendJson(res, 200, { ok: true, user: publicUser(me) });
+    }
+    if (p === '/api/profile/avatar' && method === 'POST') {
+      const av = body.avatar;
+      if (av === null || av === '') { me.avatar = null; save(); return sendJson(res, 200, { ok: true, user: publicUser(me) }); }
+      if (typeof av !== 'string' || !/^data:image\/(jpeg|png|webp);base64,/.test(av)) return sendJson(res, 400, { ok: false, error: 'bad_avatar' });
+      if (av.length > 150000) return sendJson(res, 400, { ok: false, error: 'avatar_too_large' });
+      me.avatar = av; save();
       return sendJson(res, 200, { ok: true, user: publicUser(me) });
     }
     // ---- beneficiaries (user-managed recipients) ----
@@ -626,6 +635,7 @@ async function handle(req, res) {
     if (p === '/api/bills/pay' && method === 'POST') {
       const bill = BILLS.find((b) => b.id === body.billId);
       if (!bill) return sendJson(res, 400, { ok: false, error: 'bad_bill' });
+      if (!checkPin(me, body.pin, res)) return;
       if (isFrozenAll(me)) return sendJson(res, 403, { ok: false, error: 'frozen_all' });
       if (availableSdg(me) < bill.amountSdg) return sendJson(res, 400, { ok: false, error: 'insufficient' });
       me.sdgBalance -= bill.amountSdg;
@@ -750,6 +760,20 @@ async function handle(req, res) {
       return sendJson(res, 200, { ok: true, deposit: dep, user: publicUser(me) });
     }
 
+    if (p === '/api/deposits/cancel' && method === 'POST') {
+      const dep = db().deposits.find((d) => d.id === Number(body.depositId) && d.userId === me.id);
+      if (!dep) return sendJson(res, 404, { ok: false, error: 'not_found' });
+      if (dep.status !== 'active') return sendJson(res, 400, { ok: false, error: 'deposit_not_active' });
+      // No payout flow exists, so maturity is judged by the maturity date:
+      // past maturity counts as matured and cannot be cancelled either.
+      if (Date.now() >= new Date(dep.maturityDate).getTime()) return sendJson(res, 400, { ok: false, error: 'deposit_matured' });
+      dep.status = 'cancelled';
+      me.sdgBalance += dep.principal;
+      addTx({ userId: me.id, type: 'deposit_cancel', titleAr: `إلغاء وديعة — استرداد أصل ${dep.principal} ج.س (الأرباح ملغاة)`, titleEn: `Deposit cancelled — principal ${dep.principal} SDG refunded (profit forfeited)`, amountSdg: dep.principal, currency: 'SDG', fromName: me.fullNameAr, fromAccount: me.sdgAccount, toName: me.fullNameAr, toAccount: me.sdgAccount });
+      save();
+      return sendJson(res, 200, { ok: true, deposit: dep, user: publicUser(me) });
+    }
+
     // ---- investment price movement: one GLOBAL live price per asset, ----
     // ---- same for every user. Lazy hourly tick (the free host sleeps, so
     // ---- no background cron is reliable): on each investments request the
@@ -800,9 +824,14 @@ async function handle(req, res) {
       const holdings = db().investments.filter((h) => h.userId === me.id).map((h) => {
         const a = liveAssets().find((x) => x.id === h.assetId);
         const value = Math.round(h.quantity * a.priceSdg);
-        return { ...h, asset: a, currentPriceSdg: a.priceSdg, valueSdg: value, profitSdg: value - Math.round(h.quantity * h.avgPriceSdg) };
+        const cost = Math.round(h.quantity * h.avgPriceSdg);
+        const profit = value - cost;
+        return { ...h, asset: a, currentPriceSdg: a.priceSdg, valueSdg: value, costSdg: cost, profitSdg: profit, profitPct: cost ? (profit / cost * 100) : 0 };
       });
-      return sendJson(res, 200, { ok: true, holdings, log: db().investmentLog.filter((l) => l.userId === me.id).slice(-50).reverse() });
+      const totalProfitSdg = holdings.reduce((s, h) => s + h.profitSdg, 0);
+      const totalValueSdg = holdings.reduce((s, h) => s + h.valueSdg, 0);
+      const totalCostSdg = holdings.reduce((s, h) => s + h.costSdg, 0);
+      return sendJson(res, 200, { ok: true, holdings, totalProfitSdg, totalValueSdg, totalCostSdg, log: db().investmentLog.filter((l) => l.userId === me.id).slice(-50).reverse() });
     }
     if ((p === '/api/investments/buy' || p === '/api/investments/sell') && method === 'POST') {
       tickPrices();

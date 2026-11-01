@@ -188,6 +188,11 @@ function friendlyErr(m){
     pin_required: lang === 'en' ? 'Enter your 4-digit PIN' : 'أدخل رمز PIN المكون من 4 أرقام',
     pin_incorrect: lang === 'en' ? 'Wrong PIN — try again' : 'رمز PIN غير صحيح — حاول مجدداً',
     pin_locked: lang === 'en' ? 'PIN checks are locked for 5 minutes after repeated wrong attempts' : 'تم قفل التحقق بالـ PIN لمدة 5 دقائق بعد محاولات خاطئة متكررة',
+    pin_not_set: lang === 'en' ? 'A payment PIN is required — set one first' : 'رمز PIN مطلوب للدفع — اضبط واحداً أولاً',
+    deposit_not_active: lang === 'en' ? 'This deposit cannot be cancelled' : 'لا يمكن إلغاء هذه الوديعة',
+    deposit_matured: lang === 'en' ? 'This deposit has matured and cannot be cancelled' : 'هذه الوديعة استحقت ولا يمكن إلغاؤها',
+    avatar_too_large: lang === 'en' ? 'Picture too large — pick a smaller one' : 'الصورة كبيرة جداً — اختر صورة أصغر',
+    bad_avatar: lang === 'en' ? 'Could not read that picture' : 'تعذر قراءة هذه الصورة',
     reset_failed: lang === 'en' ? 'The answers did not match' : 'الإجابات غير مطابقة',
     no_pin: lang === 'en' ? 'No PIN set yet' : 'لم يتم ضبط رمز PIN بعد',
     pin_exists: lang === 'en' ? 'A PIN is already set — change it instead' : 'رمز PIN مضبوط بالفعل — غيّره بدلاً من ذلك',
@@ -214,6 +219,34 @@ function pinSheet(title){
     const inp = back.querySelector('#pin-inp'); setTimeout(() => inp.focus(), 50);
   });
 }
+// Mandatory-PIN setup sheet: payments cannot be skipped past this — the
+// user sets a PIN (verified with their password, as in the Security Centre)
+// and the payment then continues with it.
+function pinSetupSheet(){
+  return new Promise((resolve) => {
+    const back = document.createElement('div'); back.className = 'sheet-back';
+    back.innerHTML = `<div class="sheet"><div class="sheet-title">${esc(lang === 'en' ? 'Set a payment PIN to continue' : 'اضبط رمز PIN للدفع للمتابعة')}</div>
+    <p class="sheet-note">${esc(lang === 'en' ? 'Every payment requires a PIN. Set one now — this step cannot be skipped.' : 'كل دفعة تتطلب رمز PIN. اضبط واحداً الآن — لا يمكن تخطي هذه الخطوة.')}</p>
+    <label>${esc(lang === 'en' ? 'Your password' : 'كلمة المرور')}</label><input id="ps-pass" type="password" autocomplete="off">
+    <label>${esc(lang === 'en' ? 'New 4-digit PIN' : 'رمز PIN جديد (4 أرقام)')}</label><input id="ps-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" style="font-size:24px;letter-spacing:12px;text-align:center">
+    <div id="ps-err" class="err"></div>
+    <div class="sheet-actions"><button type="button" class="btn secondary" id="sheet-cancel">${esc(lang === 'en' ? 'Cancel' : 'إلغاء')}</button><button type="button" class="btn" id="sheet-ok">${esc(lang === 'en' ? 'Set PIN and continue' : 'ضبط الرمز والمتابعة')}</button></div></div>`;
+    const done = (v) => { back.remove(); resolve(v); };
+    back.querySelector('#sheet-ok').onclick = () => { const password = back.querySelector('#ps-pass').value; const pin = back.querySelector('#ps-pin').value.trim(); if (!password) { back.querySelector('#ps-err').textContent = friendlyErr('bad_password'); return; } if (!/^\d{4}$/.test(pin)) { back.querySelector('#ps-err').textContent = friendlyErr('bad_pin'); return; } done({ password, pin }); };
+    back.querySelector('#sheet-cancel').onclick = () => done(null);
+    back.onclick = (e) => { if (e.target === back) done(null); };
+    document.body.appendChild(back);
+    setTimeout(() => back.querySelector('#ps-pass').focus(), 50);
+  });
+}
+async function ensurePaymentPin(){
+  if (me?.pinSet) return await pinSheet(lang === 'en' ? 'Enter your payment PIN' : 'أدخل رمز PIN للدفع');
+  const setup = await pinSetupSheet();
+  if (!setup) return null;
+  try { await api('/api/security/pin/set', { method:'POST', body: JSON.stringify({ pin: setup.pin, password: setup.password }) }); me = { ...me, pinSet: true }; await loadDash(); return setup.pin; }
+  catch(e){ if (e.message === 'pin_exists') { me = { ...me, pinSet: true }; return await pinSheet(lang === 'en' ? 'Enter your payment PIN' : 'أدخل رمز PIN للدفع'); } toast(friendlyErr(e.message), 'err'); return null; }
+}
+function avatarHtml(u){ return u && u.avatar ? `<img class="avatar-sm" src="${esc(u.avatar)}" alt="">` : `<span class="acct-ic">${IC.users}</span>`; }
 function qtySheet(title){
   return new Promise((resolve) => {
     const back = document.createElement('div'); back.className = 'sheet-back';
@@ -418,12 +451,13 @@ function accountView(){
   `;
   const letter = (nameOf(me) || 'و').trim().charAt(0) || 'و';
   const others = (dash?.beneficiaries || []).filter(u => u.id !== me.id);
-  const ben = others.map(u => `<button type="button" class="menu-row" onclick="go('transfer')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet' : 'لا يوجد مستفيدون بعد'}</p>`;
+  const ben = others.map(u => `<button type="button" class="menu-row" onclick="go('transfer')">${avatarHtml(u)}<span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet' : 'لا يوجد مستفيدون بعد'}</p>`;
   return `<div class="page-title">${t('myAccount')}</div>
-  <div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc(letter)}</div><div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${me.role === 'admin' ? (lang === 'en' ? 'Admin account — Wassil' : 'حساب الأدمن — وصل') : t('demoClient')}</div></div></div>
+  <div class="profile-card"><div class="profile-top">${me.avatar ? `<img class="avatar-lg" src="${esc(me.avatar)}" alt="">` : `<div class="profile-avatar">${esc(letter)}</div>`}<div><div class="profile-name">${esc(nameOf(me))}</div><div class="profile-role">${me.role === 'admin' ? (lang === 'en' ? 'Admin account — Wassil' : 'حساب الأدمن — وصل') : t('demoClient')}</div></div></div>
   <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(me.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(me.sdgBalance)}</span></div>
   <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(me.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(me.fxBalanceCents)}</span></div>
-  <div class="acct-row"><span class="acct-ic">${IC.mail}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${t('email')}</span><span class="acct-row-sub" style="display:block">${esc(me.email)}</span></span><span class="pill-active">${me.status === 'active' ? t('active') : esc(me.status || '')}</span></div></div>
+  <div class="acct-row"><span class="acct-ic">${IC.mail}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${t('email')}</span><span class="acct-row-sub" style="display:block">${esc(me.email)}</span></span><span class="pill-active">${me.status === 'active' ? t('active') : esc(me.status || '')}</span></div>
+  <div class="acct-row"><span class="acct-ic">${IC.users}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'Profile picture' : 'صورة البروفايل'}</span><span class="acct-row-sub" style="display:block">${lang === 'en' ? 'Shown on your profile and next to your name' : 'تظهر في بروفايلك وجنب اسمك'}</span></span><span style="display:flex;gap:8px"><input type="file" id="avatar-inp" accept="image/*" style="display:none" onchange="onAvatarFile(this)"><button type="button" class="btn secondary" style="width:auto" onclick="document.getElementById('avatar-inp').click()">${lang === 'en' ? 'Change' : 'تغيير'}</button>${me.avatar ? `<button type="button" class="btn secondary" style="width:auto" onclick="removeAvatar()">${lang === 'en' ? 'Remove' : 'إزالة'}</button>` : ''}</span></div><div id="avatar-err" class="err"></div></div>
   ${me.frozenAll ? `<div class="profile-card" style="border:1.5px solid var(--danger)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'All assets frozen' : 'كل الأصول مجمدة'}</div><p class="muted" style="margin:0">${lang === 'en' ? 'The admin has frozen all your assets — no outgoing operations are possible until the admin releases the freeze.' : 'الأدمن جمّد كل أصولك — لا يمكن إجراء أي عملية صادرة حتى يفك الأدمن التجميد.'}</p></div>` : ((me.frozenSdg || 0) > 0 ? `<div class="profile-card" style="border:1.5px solid var(--danger)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'Amount frozen' : 'مبلغ مجمد'}</div><p class="muted" style="margin:0">${lang === 'en' ? `Frozen by admin: ${moneySdg(me.frozenSdg)} — your usable balance is your balance minus the frozen amount.` : `مبلغ مجمد من الأدمن: ${moneySdg(me.frozenSdg)} — رصيدك المتاح هو رصيدك ناقص المبلغ المجمد.`}</p></div>` : '')}
   <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${lang === 'en' ? 'Your invite code' : 'رمز الدعوة الخاص بك'}</span></span></div>
   <p class="muted" style="direction:ltr;text-align:center;font-weight:900;font-size:18px;color:#0f766e">WSL${esc(me.sdgAccount || '')}</p>
@@ -656,7 +690,7 @@ async function maybeSuggestBeneficiary(j){
 function transferView(){
   const others = (dash?.beneficiaries || []).filter(u => u.id !== me?.id);
   const opts = others.map(u => `<option value="${esc(u.sdgAccount || '')}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
-  const list = others.map(u => `<button type="button" class="menu-row" onclick="pickTransferUser('${esc(u.sdgAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet — add one below.' : 'لا يوجد مستفيدون بعد — أضف واحداً بالأسفل.'}</p>`;
+  const list = others.map(u => `<button type="button" class="menu-row" onclick="pickTransferUser('${esc(u.sdgAccount || '')}')">${avatarHtml(u)}<span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${esc(u.sdgAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">${lang === 'en' ? 'No beneficiaries yet — add one below.' : 'لا يوجد مستفيدون بعد — أضف واحداً بالأسفل.'}</p>`;
   return `<div class="page-title">${t('transferTitle')}</div>
   <div class="card">
   <label>${t('beneficiary')}</label>
@@ -666,7 +700,7 @@ function transferView(){
   <label>${t('noteOptional')}</label><input id="tr-note" placeholder="${lang === 'en' ? 'Example: monthly expenses' : 'مثال: مصاريف الشهر'}">
   <div id="tr-name" class="muted"></div><button class="btn secondary" onclick="lookupAcc()">Check / تحقق</button>
   <button class="btn" onclick="doTransfer()">${t('review')}</button><div id="tr-err" class="err"></div>
-  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre so every transfer asks for confirmation.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان ليطلب منك تأكيد كل تحويل.'} <button type="button" class="link-btn" onclick="go('security')">${lang === 'en' ? 'Security Centre' : 'مركز الأمان'}</button></p>` : ''}
+  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'A payment PIN is required for every payment — if you have not set one, the payment will ask you to set it first.' : 'رمز PIN مطلوب لكل دفعة — لو ما مضبوط، الدفع حيطلب منك تضبطو أولاً.'} <button type="button" class="link-btn" onclick="go('security')">${lang === 'en' ? 'Security Centre' : 'مركز الأمان'}</button></p>` : ''}
   <button class="btn secondary" onclick="go('home')">${t('back')}</button></div>
   <div class="tabs"><button type="button" class="tab-btn ${transferTab === 'users' ? 'active' : ''}" onclick="setTransferTab('users')">${lang === 'en' ? 'Beneficiaries' : 'المستفيدون'}</button><button type="button" class="tab-btn ${transferTab === 'saved' ? 'active' : ''}" onclick="setTransferTab('saved')">${t('savedBeneficiaries')}</button></div>
   <div class="card">${list}</div>${beneficiariesBlock()}`;
@@ -681,7 +715,7 @@ function setTransferTab(tab){ transferTab = tab; render(); }
 function fxView(){
   if (!me) return loginView();
   const others = (dash?.beneficiaries || []).filter(u => u.id !== me.id);
-  const users = others.map(u => `<button type="button" class="menu-row" onclick="pickFxUser('${esc(u.fxAccount || '')}')"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${lang === 'en' ? 'FX account: ' : 'رقم الحساب الأجنبي: '}${esc(u.fxAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">—</p>`;
+  const users = others.map(u => `<button type="button" class="menu-row" onclick="pickFxUser('${esc(u.fxAccount || '')}')">${avatarHtml(u)}<span class="menu-row-main"><span class="menu-row-title" style="display:block">${esc(nameOf(u))}</span><span class="menu-row-sub" style="direction:ltr;display:block;text-align:start">${lang === 'en' ? 'FX account: ' : 'رقم الحساب الأجنبي: '}${esc(u.fxAccount || '')}</span></span><span>›</span></button>`).join('') || `<p class="muted">—</p>`;
   const fxTxs = (dash?.transactions || []).filter(tx => (tx.type || '').startsWith('fx_'));
   const fxRows = fxTxs.map(opRow).join('') || `<p class="muted">—</p>`;
   const fundForm = fxAction === 'fund' ? `<div class="card"><h3>${t('fundFx')}</h3><label>${t('amountSdg')}</label><input id="fx-amt" type="number" min="1">
@@ -689,7 +723,7 @@ function fxView(){
   const transferForm = fxAction === 'transfer' ? `<div class="card"><h3>${t('fxTransfer')}</h3><label>FX account / رقم الحساب الأجنبي</label><input id="fx-to" placeholder="2002 0000 0002" oninput="lookupDebounced('fx-to','fx-name')"><div id="fx-name" class="muted"></div>
   <label>${t('amountUsd')}</label><input id="fx-usd" type="number" step="0.01" min="0.01">
   <button class="btn" onclick="doFxTransfer()">${t('fxTransfer')}</button>
-  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان.'}</p>` : ''}</div>` : '';
+  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'A payment PIN is required for every payment — if you have not set one, the payment will ask you to set it first.' : 'رمز PIN مطلوب لكل دفعة — لو ما مضبوط، الدفع حيطلب منك تضبطو أولاً.'}</p>` : ''}</div>` : '';
   const sellForm = fxAction === 'sell' ? `<div class="card"><h3>${lang === 'en' ? 'Convert to SDG' : 'تحويل إلى الجنيه'}</h3><p class="muted">${lang === 'en' ? 'Same rate as funding: 1 USD = ' : 'بنفس سعر الشحن: 1 دولار = '}${dash?.usdRate || 10000} ${lang === 'en' ? 'SDG' : 'ج.س'}</p><label>${t('amountUsd')}</label><input id="fx-sell-usd" type="number" step="0.01" min="0.01">
   <button class="btn" onclick="doFxSell()">${lang === 'en' ? 'Convert to SDG' : 'تحويل إلى الجنيه'}</button></div>` : '';
   return `${backLink(t('backServices'), 'services')}
@@ -750,7 +784,7 @@ function cardTransferView(){
   <div id="cc-bal" class="muted">${lang === 'en' ? 'Source card balance: ' : 'رصيد بطاقة المصدر: '}${src ? moneyUsd(src.balanceCents) : ''}</div>
   <label>${t('noteOptional')}</label><input id="cc-note">
   <button class="btn" onclick="doCardTransfer()">${t('reviewTransfer')}</button><div id="cc-err" class="err"></div>
-  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'No transfer PIN set yet — set one in the Security Centre.' : 'لم تضبط رمز PIN للتحويل بعد — اضبطه من مركز الأمان.'}</p>` : ''}
+  ${(!me?.pinSet) ? `<p class="muted">${lang === 'en' ? 'A payment PIN is required for every payment — if you have not set one, the payment will ask you to set it first.' : 'رمز PIN مطلوب لكل دفعة — لو ما مضبوط، الدفع حيطلب منك تضبطو أولاً.'}</p>` : ''}
   <button class="btn secondary" onclick="go('cards')">${t('back')}</button></div>`;
 }
 async function doCardTransfer(){
@@ -760,13 +794,12 @@ async function doCardTransfer(){
   // Review step; the optional note is shown on the form only — the card-transfer API takes no note field, so it is not sent or stored.
   await loadDash();
   const ccName = $('#cc-name') ? $('#cc-name').textContent : '';
-  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
+  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Required — you will be asked to set one' : 'مطلوب — سيُطلب منك ضبطه قبل الدفع'];
   if (!(await confirmSheet({ title: lang === 'en' ? 'Review card transfer' : 'مراجعة التحويل من بطاقة', lines: [[lang === 'en' ? 'To card' : 'إلى البطاقة', ccName || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine] }))) return;
-  let pin = '';
-  if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
+  const pin = await ensurePaymentPin(); if (pin === null) return;
   const runCard = async (p) => api('/api/cards/transfer', { method:'POST', body: JSON.stringify({ fromCardId: from, toCardNumber: to, amountUsd: amt, pin: p }) });
   try { const j = await runCard(pin); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j.ref); await loadDash(); openCard(from); }
-  catch(e){ if (e.message === 'pin_required') { const p2 = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runCard(p2); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j2.ref); await loadDash(); openCard(from); } catch(e2){ const el2 = $('#cc-err'); if (el2) el2.textContent = friendlyErr(e2.message); } } else { const el = $('#cc-err'); if (el) el.textContent = friendlyErr(e.message); } }
+  catch(e){ if (e.message === 'pin_required' || e.message === 'pin_not_set') { const p2 = e.message === 'pin_not_set' ? await ensurePaymentPin() : await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runCard(p2); toast((lang === 'en' ? 'Card transfer successful — ' : 'تم التحويل من البطاقة بنجاح — ') + j2.ref); await loadDash(); openCard(from); } catch(e2){ const el2 = $('#cc-err'); if (el2) el2.textContent = friendlyErr(e2.message); } } else { const el = $('#cc-err'); if (el) el.textContent = friendlyErr(e.message); } }
 }
 function cardsView(){
   const cards = dash?.cards || [];
@@ -828,8 +861,8 @@ async function loadDeposits(){
   const el = $('#deposits-list'); if (!el) return;
   try {
     const j = await api('/api/deposits');
-    el.innerHTML = (j.deposits || []).map(d => `<div class="dep-row"><div style="font-weight:800">${lang === 'en' ? 'Deposit' : 'وديعة'} ${moneySdg(d.principal)} — ${durationLabel(d.days)}</div>
-    <div class="muted">${lang === 'en' ? 'Expected profit' : 'الربح الافتراضي'} (${Math.round(d.rate * 100)}% ${lang === 'en' ? 'per year' : 'سنوياً'}): ${moneySdg(d.profit)} · ${lang === 'en' ? 'Total at maturity' : 'الإجمالي عند الاستحقاق'}: ${moneySdg(d.total)} · ${lang === 'en' ? 'Maturity' : 'الاستحقاق'}: ${fmtDate(d.maturityDate)} · ${lang === 'en' ? 'Deposit' : 'المرجع'} #${d.id}</div></div>`).join('') || `<p class="muted">—</p>`;
+    el.innerHTML = (j.deposits || []).map(d => { const cancellable = d.status === 'active' && new Date(d.maturityDate).getTime() > Date.now(); const st = d.status === 'cancelled' ? (lang === 'en' ? 'Cancelled' : 'ملغاة') : (d.status === 'active' ? (lang === 'en' ? 'Active' : 'نشطة') : esc(d.status || '')); return `<div class="dep-row"><div style="font-weight:800">${lang === 'en' ? 'Deposit' : 'وديعة'} ${moneySdg(d.principal)} — ${durationLabel(d.days)} — ${st}</div>
+    <div class="muted">${lang === 'en' ? 'Expected profit' : 'الربح الافتراضي'} (${Math.round(d.rate * 100)}% ${lang === 'en' ? 'per year' : 'سنوياً'}): ${moneySdg(d.profit)} · ${lang === 'en' ? 'Total at maturity' : 'الإجمالي عند الاستحقاق'}: ${moneySdg(d.total)} · ${lang === 'en' ? 'Maturity' : 'الاستحقاق'}: ${fmtDate(d.maturityDate)} · ${lang === 'en' ? 'Deposit' : 'المرجع'} #${d.id}</div>${cancellable ? `<button class="btn small" onclick="cancelDeposit(${d.id}, ${d.principal})">${lang === 'en' ? 'Cancel deposit' : 'إلغاء الوديعة'}</button>` : ''}</div>`; }).join('') || `<p class="muted">—</p>`;
   } catch(e){ el.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
 }
 function investView(){
@@ -885,7 +918,7 @@ function adminView(){
   const opts = active.map(u => `<option value="${u.id}">${esc(nameOf(u))} — ${esc(u.sdgAccount || '')}</option>`).join('');
   const shown = adminSearch ? all.filter(u => normAcctJs(u.sdgAccount) === normAcctJs(adminSearch) || normAcctJs(u.fxAccount) === normAcctJs(adminSearch) || String(u.email || '').toLowerCase().includes(String(adminSearch).toLowerCase())) : all;
   const users = shown.map(u =>
-    `<div class="profile-card"><div class="profile-top"><div class="profile-avatar">${esc((nameOf(u) || 'و').trim().charAt(0) || 'و')}</div><div><div class="profile-name">${esc(nameOf(u))}</div><div class="profile-role" style="direction:ltr;text-align:start">${esc(u.email)}</div></div><span class="pill-active">${u.status === 'banned' ? (lang === 'en' ? 'Banned' : 'محظور') : (u.status === 'active' ? t('active') : esc(u.status || ''))}</span></div>
+    `<div class="profile-card"><div class="profile-top">${u.avatar ? `<img class="avatar-lg" src="${esc(u.avatar)}" alt="">` : `<div class="profile-avatar">${esc((nameOf(u) || 'و').trim().charAt(0) || 'و')}</div>`}<div><div class="profile-name">${esc(nameOf(u))}</div><div class="profile-role" style="direction:ltr;text-align:start">${esc(u.email)}</div></div><span class="pill-active">${u.status === 'banned' ? (lang === 'en' ? 'Banned' : 'محظور') : (u.status === 'active' ? t('active') : esc(u.status || ''))}</span></div>
     <div class="acct-row"><span class="acct-ic">${IC.bank}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'SDG account' : 'الحساب بالجنيه (SDG)'}</span><span class="acct-row-sub" style="display:block">${esc(u.sdgAccount || '')}</span></span><span class="acct-row-amt">${moneySdg(u.sdgBalance)}</span></div>
     <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(u.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(u.fxBalanceCents)}</span></div>
     ${u.role === 'admin' ? '' : adminCardsHtml(u)}
@@ -1121,14 +1154,13 @@ async function doTransfer(){
   const to = $('#tr-to') ? $('#tr-to').value : ''; const amt = $('#tr-amt') ? $('#tr-amt').value : '';
   const name = $('#tr-name') ? $('#tr-name').textContent : '';
   await loadDash();
-  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
+  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Required — you will be asked to set one' : 'مطلوب — سيُطلب منك ضبطه قبل الدفع'];
   if (!(await confirmSheet({ title: lang === 'en' ? 'Review transfer' : 'مراجعة التحويل', lines: [[lang === 'en' ? 'To' : 'إلى', name || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' SDG'], [lang === 'en' ? 'Fee' : 'الرسوم', '300 SDG'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 300) + ' SDG'], pinLine], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
-  let pin = '';
-  if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
+  const pin = await ensurePaymentPin(); if (pin === null) return;
   const runTransfer = async (p) => api('/api/transfer', { method:'POST', body: JSON.stringify({ toAccount: to, amount: amt, pin: p }) });
   try { const j = await runTransfer(pin);
     toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); }
-  catch(e){ if (e.message === 'pin_required') { const p2 = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runTransfer(p2); toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j2.ref); await loadDash(); await maybeSuggestBeneficiary(j2); go('home'); } catch(e2){ $('#tr-err').textContent = friendlyErr(e2.message); } } else $('#tr-err').textContent = friendlyErr(e.message); }
+  catch(e){ if (e.message === 'pin_required' || e.message === 'pin_not_set') { const p2 = e.message === 'pin_not_set' ? await ensurePaymentPin() : await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runTransfer(p2); toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j2.ref); await loadDash(); await maybeSuggestBeneficiary(j2); go('home'); } catch(e2){ $('#tr-err').textContent = friendlyErr(e2.message); } } else $('#tr-err').textContent = friendlyErr(e.message); }
 }
 async function doFxFund(){
   try { const j = await api('/api/fx/fund', { method:'POST', body: JSON.stringify({ amountSdg: $('#fx-amt').value }) });
@@ -1145,14 +1177,13 @@ async function doFxTransfer(){
   const to = $('#fx-to').value, amt = $('#fx-usd').value;
   const fxName = $('#fx-name') ? $('#fx-name').textContent : '';
   await loadDash();
-  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Not set — proceeds without PIN' : 'غير مضبوط — سيتم التحويل من غير PIN'];
+  const pinLine = me?.pinSet ? [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Will be asked after review' : 'سيُطلب بعد المراجعة'] : [lang === 'en' ? 'PIN' : 'رمز PIN', lang === 'en' ? 'Required — you will be asked to set one' : 'مطلوب — سيُطلب منك ضبطه قبل الدفع'];
   if (!(await confirmSheet({ title: lang === 'en' ? 'Review FX transfer' : 'مراجعة التحويل الأجنبي', lines: [[lang === 'en' ? 'To FX account' : 'إلى الحساب الأجنبي', fxName || to], [lang === 'en' ? 'Amount' : 'المبلغ', amt + ' USD'], [lang === 'en' ? 'Fee' : 'الرسوم', '0.50 USD'], [lang === 'en' ? 'Total debited' : 'الإجمالي المخصوم', (Number(amt) + 0.5).toFixed(2) + ' USD'], pinLine], confirmLabel: lang === 'en' ? 'Confirm transfer' : 'تأكيد التحويل' }))) return;
-  let pin = '';
-  if (me?.pinSet) { pin = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (pin === null) return; }
+  const pin = await ensurePaymentPin(); if (pin === null) return;
   const runFx = async (p) => api('/api/fx/transfer', { method:'POST', body: JSON.stringify({ toFxAccount: to, amountUsd: amt, pin: p }) });
   try { const j = await runFx(pin);
     toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j.ref); await loadDash(); await maybeSuggestBeneficiary(j); go('home'); }
-  catch(e){ if (e.message === 'pin_required') { const p2 = await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runFx(p2); toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j2.ref); await loadDash(); await maybeSuggestBeneficiary(j2); go('home'); } catch(e2){ $('#fx-err').textContent = friendlyErr(e2.message); } } else $('#fx-err').textContent = friendlyErr(e.message); }
+  catch(e){ if (e.message === 'pin_required' || e.message === 'pin_not_set') { const p2 = e.message === 'pin_not_set' ? await ensurePaymentPin() : await pinSheet(lang === 'en' ? 'Enter your transfer PIN' : 'أدخل رمز PIN للتحويل'); if (p2 === null) return; try { const j2 = await runFx(p2); toast((lang === 'en' ? 'Transfer successful — ' : 'تم التحويل بنجاح — ') + j2.ref); await loadDash(); await maybeSuggestBeneficiary(j2); go('home'); } catch(e2){ $('#fx-err').textContent = friendlyErr(e2.message); } } else $('#fx-err').textContent = friendlyErr(e.message); }
 }
 async function requestCard(){
   try { const j = await api('/api/cards/request', { method:'POST', body: '{}' }); toast(lang === 'en' ? 'Card requested successfully' : 'تم طلب البطاقة بنجاح'); await loadDash(); go('cards'); }
@@ -1203,10 +1234,37 @@ async function doDeposit(){
     $('#dp-ok').textContent = `Rate ${Math.round(j.deposit.rate*100)}% — Profit ${j.deposit.profit} SDG — Maturity ${new Date(j.deposit.maturityDate).toLocaleDateString()} — Total ${j.deposit.total}`; await loadDash(); }
   catch(e){ $('#dp-err').textContent = e.message; }
 }
+async function cancelDeposit(id, principal){
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Cancel deposit' : 'إلغاء الوديعة', lines: [[lang === 'en' ? 'Principal refunded in full' : 'أصل المبلغ المسترد كاملاً', moneySdg(principal)]], note: lang === 'en' ? 'Accrued profit is forfeited and no fee is charged.' : 'الأرباح المستحقة تُلغى ولا تُدفع، ومن غير أي رسوم.', confirmLabel: lang === 'en' ? 'Cancel deposit' : 'إلغاء الوديعة', danger: true }))) return;
+  try { await api('/api/deposits/cancel', { method:'POST', body: JSON.stringify({ depositId: id }) }); toast(lang === 'en' ? 'Deposit cancelled — principal refunded' : 'تم إلغاء الوديعة — أُعيد أصل المبلغ'); await loadDash(); loadDeposits(); } catch(e){ toast(friendlyErr(e.message), 'err'); }
+}
+function downscaleImage(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => { const scale = Math.min(1, maxDim / Math.max(img.width, img.height)); const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale)); const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); resolve(cv.toDataURL('image/jpeg', quality || 0.8)); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad_avatar')); };
+    img.src = url;
+  });
+}
+async function onAvatarFile(inp){
+  const f = inp.files && inp.files[0]; if (!f) return;
+  try {
+    let dataUrl = await downscaleImage(f, 256, 0.8);
+    if (dataUrl.length > 150000) { dataUrl = await downscaleImage(f, 192, 0.7); }
+    if (dataUrl.length > 150000) throw new Error('avatar_too_large');
+    const j = await api('/api/profile/avatar', { method:'POST', body: JSON.stringify({ avatar: dataUrl }) }); me = j.user; await loadDash(); go('account');
+  } catch(e){ const el = $('#avatar-err'); if (el) el.textContent = friendlyErr(e.message); else toast(friendlyErr(e.message), 'err'); }
+}
+async function removeAvatar(){ try { const j = await api('/api/profile/avatar', { method:'POST', body: JSON.stringify({ avatar: null }) }); me = j.user; await loadDash(); go('account'); } catch(e){ toast(friendlyErr(e.message), 'err'); } }
 async function loadInvest(){
   try { const a = await api('/api/investments/assets'); const p = await api('/api/investments/portfolio');
     $('#inv-assets').innerHTML = a.assets.map(x => { const base = x.basePriceSdg || x.priceSdg; const diff = x.priceSdg - base; const pct = base ? (diff / base * 100) : 0; const col = diff > 0 ? '#047857' : diff < 0 ? '#dc2626' : '#64748b'; const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—'; const word = diff > 0 ? (lang==='en' ? 'Up' : 'ارتفع') : diff < 0 ? (lang==='en' ? 'Down' : 'انخفض') : (lang==='en' ? 'Steady' : 'ثابت'); const badge = `${arrow} ${word} ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`; const wait = diff === 0 ? ` <span class="muted">${lang==='en' ? '— first move within 5 minutes' : '— أول حركة خلال 5 دقائق'}</span>` : ''; return `<div class="row"><span><b>${lang==='en'?x.nameEn:x.nameAr}</b> — ${x.priceSdg} SDG / ${lang==='en'?x.unitEn:x.unitAr}<br><span class="muted">${lang==='en' ? 'Starting price' : 'السعر الأصلي'}: ${base} SDG</span> <span style="color:${col};font-weight:800">${badge}</span>${wait}</span><button class="btn small" onclick="buyAsset('${x.id}')">Buy / شراء</button></div>`; }).join('');
-    $('#inv-port').innerHTML = '<h3>Portfolio / المحفظة</h3>' + (p.holdings.map(h => { const nm = h.asset ? (lang==='en' ? h.asset.nameEn : h.asset.nameAr) : h.assetId; const arr = h.profitSdg > 0 ? '▲ ' : h.profitSdg < 0 ? '▼ ' : ''; return `<div class="row"><span>${nm} × ${h.quantity} — value ${h.valueSdg} — P/L <span style="color:${h.profitSdg >= 0 ? '#047857' : '#dc2626'};font-weight:800">${arr}${h.profitSdg}</span></span><button class="btn small" onclick="sellAsset('${h.assetId}')">Sell / بيع</button></div>`; }).join('') || '<p class="muted">—</p>');
+    const tot = p.totalProfitSdg != null ? p.totalProfitSdg : p.holdings.reduce((s, h) => s + (h.profitSdg || 0), 0);
+    const totVal = p.totalValueSdg != null ? p.totalValueSdg : p.holdings.reduce((s, h) => s + (h.valueSdg || 0), 0);
+    const totCost = p.totalCostSdg != null ? p.totalCostSdg : p.holdings.reduce((s, h) => s + (h.costSdg || 0), 0);
+    const totPct = totCost ? (tot / totCost * 100) : 0;
+    const sumHtml = p.holdings.length ? `<div class="row" style="background:#f0fdfa"><span><b>${lang === 'en' ? 'Total profit (unrealised)' : 'إجمالي الربح (غير المحقق)'}</b> — <span style="color:${tot >= 0 ? '#047857' : '#dc2626'};font-weight:800">${tot >= 0 ? '+' : ''}${tot} SDG (${tot >= 0 ? '+' : ''}${totPct.toFixed(1)}%)</span><br><span class="muted">${lang === 'en' ? 'Value' : 'القيمة'}: ${totVal} SDG · ${lang === 'en' ? 'Total cost' : 'إجمالي التكلفة'}: ${totCost} SDG</span></span></div>` : '';
+    $('#inv-port').innerHTML = '<h3>Portfolio / المحفظة</h3>' + sumHtml + (p.holdings.map(h => { const nm = h.asset ? (lang==='en' ? h.asset.nameEn : h.asset.nameAr) : h.assetId; const arr = h.profitSdg > 0 ? '▲ ' : h.profitSdg < 0 ? '▼ ' : ''; const pct = h.profitPct != null ? h.profitPct : (h.costSdg ? (h.profitSdg / h.costSdg * 100) : 0); return `<div class="row"><span>${nm} × ${h.quantity}<br><span class="muted">${lang === 'en' ? 'Cost' : 'التكلفة'}: ${h.costSdg} SDG · ${lang === 'en' ? 'Value' : 'القيمة'}: ${h.valueSdg} SDG</span> — P/L <span style="color:${h.profitSdg >= 0 ? '#047857' : '#dc2626'};font-weight:800">${arr}${h.profitSdg} SDG (${h.profitSdg >= 0 ? '+' : ''}${pct.toFixed(1)}%)</span></span><button class="btn small" onclick="sellAsset('${h.assetId}')">Sell / بيع</button></div>`; }).join('') || '<p class="muted">—</p>');
   } catch(e){ const el = $('#inv-err'); if (el) el.textContent = e.message; }
 }
 async function buyAsset(id){
@@ -1248,7 +1306,12 @@ async function adminUnban(id){ await adminAction('/api/admin/unban', { targetUse
 async function loadBills(){
   try { const j = await api('/api/bills'); $('#bills-list').innerHTML = j.bills.map(b => `<div class="row"><span>${lang==='en'?b.nameEn:b.nameAr} — ${b.amountSdg}</span><button class="btn small" onclick="payBill('${b.id}')">Pay / دفع</button></div>`).join(''); } catch {}
 }
-async function payBill(id){ try { await api('/api/bills/pay', { method:'POST', body: JSON.stringify({ billId: id }) }); toast('OK'); await loadDash(); } catch(e){ toast(e.message, 'err'); } }
+async function payBill(id){
+  const pin = await ensurePaymentPin(); if (pin === null) return;
+  const run = async (p) => api('/api/bills/pay', { method:'POST', body: JSON.stringify({ billId: id, pin: p }) });
+  try { await run(pin); toast('OK'); await loadDash(); }
+  catch(e){ if (e.message === 'pin_required' || e.message === 'pin_not_set') { const p2 = e.message === 'pin_not_set' ? await ensurePaymentPin() : await pinSheet(lang === 'en' ? 'Enter your payment PIN' : 'أدخل رمز PIN للدفع'); if (p2 === null) return; try { await run(p2); toast('OK'); await loadDash(); } catch(e2){ toast(friendlyErr(e2.message), 'err'); } } else toast(friendlyErr(e.message), 'err'); }
+}
 async function loadGoals(){
   try { const j = await api('/api/goals'); $('#goals-list').innerHTML = j.goals.map(g => `<div class="row"><span>${esc(g.name)} — ${g.savedSdg}/${g.targetSdg}</span></div>`).join(''); } catch {}
 }
