@@ -83,6 +83,40 @@ function addTx(tx) {
   d.transactions.push(tx);
   return tx;
 }
+// Signup bonuses, shared by registration (accounts now work immediately,
+// no activation step): welcome bonus 15,000 SDG once per device, and
+// invite bonus 50,000 SDG EACH for the new account and the inviter for a
+// valid code (WSL + inviter SDG account, or bare number), once per device.
+function grantSignupBonuses(d, u, deviceId) {
+  let bonusGranted = false, inviteBonusGranted = false, inviteInvalid = false, inviteDeviceClaimed = false;
+  const devId = String(deviceId || '').trim();
+  if (devId) {
+    if (!d.usedBonusDevices) d.usedBonusDevices = [];
+    if (!d.usedBonusDevices.includes(devId)) {
+      d.usedBonusDevices.push(devId);
+      u.sdgBalance += 15000;
+      bonusGranted = true;
+      addTx({ userId: u.id, type: 'welcome_bonus', titleAr: 'مكافأة ترحيبية — 15,000 ج.س', titleEn: 'Welcome bonus — 15,000 SDG', amountSdg: 15000, currency: 'SDG', fromName: 'وصل', fromAccount: 'Wassil', toName: u.fullNameAr, toAccount: u.sdgAccount });
+    }
+  }
+  const rawCode = String(u.pendingInviteCode || '').trim().toUpperCase();
+  if (rawCode) {
+    const digits = rawCode.startsWith('WSL') ? rawCode.slice(3) : rawCode;
+    const inviter = d.users.find((x) => x.status === 'active' && x.id !== u.id && normAcct(x.sdgAccount) === normAcct(digits));
+    if (!inviter) inviteInvalid = true;
+    else if (devId && (d.usedInviteDevices || []).includes(devId)) inviteDeviceClaimed = true;
+    else if (devId) {
+      if (!d.usedInviteDevices) d.usedInviteDevices = [];
+      d.usedInviteDevices.push(devId);
+      u.sdgBalance += 50000;
+      inviter.sdgBalance += 50000;
+      inviteBonusGranted = true;
+      addTx({ userId: u.id, type: 'invite_bonus', titleAr: 'مكافأة رمز دعوة — 50,000 ج.س', titleEn: 'Invite code bonus — 50,000 SDG', amountSdg: 50000, currency: 'SDG', fromName: inviter.fullNameAr, fromAccount: inviter.sdgAccount, toName: u.fullNameAr, toAccount: u.sdgAccount });
+      addTx({ userId: inviter.id, type: 'invite_reward', titleAr: 'مكافأة دعوة صديق — 50,000 ج.س', titleEn: 'Friend invite reward — 50,000 SDG', amountSdg: 50000, currency: 'SDG', fromName: u.fullNameAr, fromAccount: u.sdgAccount, toName: inviter.fullNameAr, toAccount: inviter.sdgAccount });
+    }
+  }
+  return { bonusGranted, inviteBonusGranted, inviteInvalid, inviteDeviceClaimed };
+}
 function availableSdg(u) { return dbmod.availableSdg(u); }
 function isFrozenAll(u) { return dbmod.isFrozenAll(u); }
 const normAcct = dbmod.normAcct;
@@ -166,19 +200,26 @@ async function handle(req, res) {
       if (body.policyAgreed !== true && body.policyAgreed !== 'true') return sendJson(res, 400, { ok: false, error: 'policy_not_agreed' });
       const d = db();
       if (d.users.some((u) => u.email.toLowerCase() === String(email).toLowerCase())) return sendJson(res, 400, { ok: false, error: 'email_exists' });
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      // No activation step: like Facebook, the account works as soon as it
+      // is created — status active, account numbers assigned, and the
+      // caller is logged straight in with a session token.
       const user = {
         id: d.nextUserSeq++, email, passwordHash: hashPassword(password),
         fullNameAr: fullNameAr.trim(), fullNameEn: fullNameEn.trim(),
-        role: 'user', status: 'pending', activationCode: code, pendingInviteCode,
+        role: 'user', status: 'active', pendingInviteCode,
         sdgAccount: null, fxAccount: null, sdgBalance: 0, fxBalanceCents: 0,
         frozenSdg: 0, frozenAll: false,
         createdAt: new Date().toISOString(),
       };
-      d.users.push(user); save();
-      // Demo activation code is returned so the UI can show it in-app.
-      // In a real app this would be emailed; here no real email is sent.
-      return sendJson(res, 200, { ok: true, userId: user.id, email: user.email, activationCode: code });
+      d.users.push(user);
+      user.sdgAccount = dbmod.accountNumber(user.id, 1000);
+      user.fxAccount = dbmod.accountNumber(user.id, 2000);
+      addTx({ userId: user.id, type: 'account_open', titleAr: 'فتح الحساب — مرحباً بك في وصّل', titleEn: 'Account opened — welcome to Wassil', amountSdg: 0, currency: 'SDG', fromName: user.fullNameAr, fromAccount: user.sdgAccount, toName: user.fullNameAr, toAccount: user.sdgAccount });
+      const bonuses = grantSignupBonuses(d, user, body.deviceId);
+      const token = newToken();
+      d.sessions.push({ token, userId: user.id, createdAt: new Date().toISOString() });
+      save();
+      return sendJson(res, 200, { ok: true, userId: user.id, email: user.email, token, user: publicUser(user), bonusGranted: bonuses.bonusGranted, inviteBonusGranted: bonuses.inviteBonusGranted, inviteInvalid: bonuses.inviteInvalid, inviteDeviceClaimed: bonuses.inviteDeviceClaimed });
     }
     if (p === '/api/activate' && method === 'POST') {
       const d = db();
@@ -239,6 +280,15 @@ async function handle(req, res) {
       const u = db().users.find((x) => x.email.toLowerCase() === ident.toLowerCase() || normAcct(x.sdgAccount) === normAcct(ident) || normAcct(x.fxAccount) === normAcct(ident));
       if (!u || !verifyPassword(body.password || '', u.passwordHash)) return sendJson(res, 401, { ok: false, error: 'bad_login' });
       if (u.status === 'banned') return sendJson(res, 403, { ok: false, error: 'banned' });
+      // Accounts created before the activation step was removed: activate
+      // on first login so they work without any code either.
+      if (u.status === 'pending') {
+        u.status = 'active';
+        u.sdgAccount = dbmod.accountNumber(u.id, 1000);
+        u.fxAccount = dbmod.accountNumber(u.id, 2000);
+        addTx({ userId: u.id, type: 'account_open', titleAr: 'فتح الحساب — مرحباً بك في وصّل', titleEn: 'Account opened — welcome to Wassil', amountSdg: 0, currency: 'SDG', fromName: u.fullNameAr, fromAccount: u.sdgAccount, toName: u.fullNameAr, toAccount: u.sdgAccount });
+        save();
+      }
       if (u.status !== 'active') return sendJson(res, 403, { ok: false, error: 'not_activated' });
       const token = newToken();
       db().sessions.push({ token, userId: u.id, createdAt: new Date().toISOString() }); save();
