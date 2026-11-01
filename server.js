@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const dbmod = require('./lib/db');
 const { hashPassword, verifyPassword, newToken, publicUser } = require('./lib/auth');
 const wa = require('./lib/webauthn');
+const pushLib = require('./lib/push');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const USD_RATE = 10000; // 1 USD = 10,000 SDG (demo rate, change here to change it everywhere server-side)
@@ -320,6 +321,88 @@ async function handle(req, res) {
       save();
       return sendJson(res, 200, { ok: true, user: publicUser(target) });
     }
+    // ---- news + browser push ----
+    // News covers ALL news and announcements (not market prices only).
+    // Public contract (stable, do not change shape):
+    //   GET /api/news        -> { ok, news: [ {id,title,body,snippet,date,createdAt} ] } newest first
+    //   GET /api/news/latest -> { id, title, snippet, createdAt } (exactly these fields)
+    function newsSnippet(body) { return String(body || '').slice(0, 120); }
+    function newsList() { return (db().news || []).slice().sort((a, b) => (b.createdAt < a.createdAt ? -1 : b.createdAt > a.createdAt ? 1 : b.id - a.id)); }
+    function newsPublic(n) { return { id: n.id, title: n.title, body: n.body, snippet: n.snippet, date: n.date, createdAt: n.createdAt }; }
+    function vapidConfig() { return { publicKey: process.env.VAPID_PUBLIC_KEY || '', privateKey: process.env.VAPID_PRIVATE_KEY || '', subject: process.env.VAPID_SUBJECT || 'mailto:admin@wassil.demo' }; }
+    async function sendNewsPush(item) {
+      const vapid = vapidConfig();
+      if (!vapid.publicKey || !vapid.privateKey) return;
+      const payload = JSON.stringify({ title: item.title, body: item.snippet, url: '/?view=news' });
+      const subs = (db().pushSubscriptions || []).slice();
+      for (const sub of subs) {
+        try {
+          const st = await pushLib.sendPush(sub, payload, vapid);
+          if (st === 404 || st === 410) db().pushSubscriptions = (db().pushSubscriptions || []).filter((x) => x !== sub);
+        } catch (_) { /* one dead endpoint must not block the rest */ }
+      }
+      save();
+    }
+    if (p === '/api/news' && method === 'GET') return sendJson(res, 200, { ok: true, news: newsList().map(newsPublic) });
+    if (p === '/api/news/latest' && method === 'GET') {
+      const latest = newsList()[0];
+      if (!latest) return sendJson(res, 404, { ok: false, error: 'not_found' });
+      return sendJson(res, 200, { id: latest.id, title: latest.title, snippet: latest.snippet, createdAt: latest.createdAt });
+    }
+    if (p === '/api/admin/news' && method === 'POST') {
+      if (!me || me.role !== 'admin') return sendJson(res, 403, { ok: false, error: 'forbidden' });
+      const title = String(body.title || '').trim(), text = String(body.body || '').trim();
+      if (!title || !text || title.length > 200 || text.length > 5000) return sendJson(res, 400, { ok: false, error: 'bad_news' });
+      if (db().nextNewsSeq == null) db().nextNewsSeq = 1;
+      const createdAt = new Date().toISOString();
+      const item = { id: db().nextNewsSeq++, title, body: text, snippet: newsSnippet(text), date: String(body.date || '').trim() || createdAt.slice(0, 10), createdAt };
+      (db().news || (db().news = [])).push(item);
+      save();
+      // Push goes out in the background so a slow push service never delays the admin UI.
+      setImmediate(() => sendNewsPush(item).catch(() => {}));
+      return sendJson(res, 200, { ok: true, item: newsPublic(item) });
+    }
+    if (p === '/api/admin/news/edit' && method === 'POST') {
+      if (!me || me.role !== 'admin') return sendJson(res, 403, { ok: false, error: 'forbidden' });
+      const item = (db().news || []).find((n) => n.id === Number(body.id));
+      if (!item) return sendJson(res, 404, { ok: false, error: 'not_found' });
+      const title = String(body.title || '').trim(), text = String(body.body || '').trim();
+      if (!title || !text || title.length > 200 || text.length > 5000) return sendJson(res, 400, { ok: false, error: 'bad_news' });
+      item.title = title; item.body = text; item.snippet = newsSnippet(text);
+      if (String(body.date || '').trim()) item.date = String(body.date).trim();
+      save();
+      return sendJson(res, 200, { ok: true, item: newsPublic(item) });
+    }
+    if (p === '/api/admin/news/delete' && method === 'POST') {
+      if (!me || me.role !== 'admin') return sendJson(res, 403, { ok: false, error: 'forbidden' });
+      const before = (db().news || []).length;
+      db().news = (db().news || []).filter((n) => n.id !== Number(body.id));
+      if (db().news.length === before) return sendJson(res, 404, { ok: false, error: 'not_found' });
+      save();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (p === '/api/push/status' && method === 'GET') {
+      const vapid = vapidConfig();
+      return sendJson(res, 200, { ok: true, pushConfigured: !!(vapid.publicKey && vapid.privateKey) });
+    }
+    if (p === '/api/push/subscribe' && method === 'POST') {
+      const vapid = vapidConfig();
+      if (!vapid.publicKey || !vapid.privateKey) return sendJson(res, 503, { ok: false, error: 'push_not_configured' });
+      const sub = body.subscription || {};
+      if (!sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return sendJson(res, 400, { ok: false, error: 'bad_subscription' });
+      try { new URL(sub.endpoint); } catch (_) { return sendJson(res, 400, { ok: false, error: 'bad_subscription' }); }
+      const list = (db().pushSubscriptions || (db().pushSubscriptions = []));
+      const ix = list.findIndex((x) => x.endpoint === sub.endpoint);
+      const rec = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth }, userId: me.id, createdAt: new Date().toISOString() };
+      if (ix >= 0) list[ix] = rec; else list.push(rec);
+      save();
+      return sendJson(res, 200, { ok: true, subscribed: true });
+    }
+    if (p === '/api/push/unsubscribe' && method === 'POST') {
+      db().pushSubscriptions = (db().pushSubscriptions || []).filter((x) => x.endpoint !== String(body.endpoint || ''));
+      save();
+      return sendJson(res, 200, { ok: true, subscribed: false });
+    }
     // ---- admin freeze / ban (admin only; ordinary users get nothing here) ----
     // Freeze a specific SDG amount, freeze ALL assets, or ban the account.
     // A banned account does not open until the admin unbans it; only the
@@ -411,9 +494,12 @@ async function handle(req, res) {
 
     // All remaining endpoints require auth, except the two public security
     // recovery routes (fetching one's own question texts, and resetting by
-    // answering them) — they must work while logged out.
+    // answering them) — they must work while logged out — and the two public
+    // news routes, which are a stable unauthenticated contract (the Android
+    // app polls them for news checks, and they must never change shape).
     const isPublicRecovery = (p === '/api/security/questions' && method === 'GET') || (p === '/api/security/reset' && method === 'POST');
-    if (!me && !isPublicRecovery) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
+    const isPublicNews = (p === '/api/news' && method === 'GET') || (p === '/api/news/latest' && method === 'GET');
+    if (!me && !isPublicRecovery && !isPublicNews) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
     // The admin account is NOT an ordinary user account: it cannot perform
     // ordinary operations for itself (transfers, FX, bills, cards, deposits,
     // investments, goals, orders). It only administers other accounts through

@@ -192,6 +192,9 @@ function friendlyErr(m){
     deposit_not_active: lang === 'en' ? 'This deposit cannot be cancelled' : 'لا يمكن إلغاء هذه الوديعة',
     deposit_matured: lang === 'en' ? 'This deposit has matured and cannot be cancelled' : 'هذه الوديعة استحقت ولا يمكن إلغاؤها',
     avatar_too_large: lang === 'en' ? 'Picture too large — pick a smaller one' : 'الصورة كبيرة جداً — اختر صورة أصغر',
+    bad_news: lang === 'en' ? 'Enter a title and text for the news item' : 'أدخل عنواناً ونصاً للخبر',
+    push_not_configured: lang === 'en' ? 'Browser notifications are not set up on the server yet' : 'إشعارات المتصفح غير مضبوطة على الخادم بعد',
+    bad_subscription: lang === 'en' ? 'Could not register this device for notifications' : 'تعذر تسجيل هذا الجهاز للإشعارات',
     bad_avatar: lang === 'en' ? 'Could not read that picture' : 'تعذر قراءة هذه الصورة',
     reset_failed: lang === 'en' ? 'The answers did not match' : 'الإجابات غير مطابقة',
     no_pin: lang === 'en' ? 'No PIN set yet' : 'لم يتم ضبط رمز PIN بعد',
@@ -283,6 +286,10 @@ async function api(path, opts={}) {
   return j;
 }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+// VAPID public key for browser push (public by design; the private key lives
+// only in the server environment, never in code).
+const VAPID_PUBLIC_KEY = 'BKSDox_Os90_kwG2IpYsokn4EqWT8rzDKR0jp3aFNs4p6O0lHKZ-aqH8LQ4PYTc3kUe3L75z8rUUIPzVOx0mYt8';
+function urlB64ToUint8Array(s){ const pad = '='.repeat((4 - (s.length % 4)) % 4); const b64 = (s + pad).replace(/-/g, '+').replace(/_/g, '/'); const raw = atob(b64); const out = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; }
 function moneySdg(n){ return (n||0).toLocaleString('en-US') + (lang === 'en' ? ' SDG' : ' ج.س'); }
 function brandName(){ return lang === 'en' ? 'Wassil' : 'وصّل'; }
 function moneyUsd(cents){ return ((cents||0)/100).toFixed(2) + ' USD'; }
@@ -415,6 +422,7 @@ function homeView(){
     <button type="button" class="tile" onclick="go('fx')"><span class="tile-ic">${IC.dollar}</span>${lang === 'en' ? 'Currencies' : 'عملات'}</button>
     <button type="button" class="tile" onclick="go('services')"><span class="tile-ic">${IC.grid}</span>${lang === 'en' ? 'All services' : 'كل الخدمات'}</button>
   </div></div>
+  <div class="card" id="home-news"><p class="muted">…</p></div>
   <div class="card"><div class="ops-head"><h2>${t('latestOps')}</h2><button type="button" class="link-btn" onclick="go('statement')">${t('showAll')}</button></div>${rows}</div>`;
 }
 function servicesView(){
@@ -458,6 +466,7 @@ function accountView(){
   <div class="acct-row"><span class="acct-ic">${IC.dollar}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'FX account' : 'الحساب الأجنبي'}</span><span class="acct-row-sub" style="display:block">${esc(me.fxAccount || '')}</span></span><span class="acct-row-amt">${moneyUsd(me.fxBalanceCents)}</span></div>
   <div class="acct-row"><span class="acct-ic">${IC.mail}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${t('email')}</span><span class="acct-row-sub" style="display:block">${esc(me.email)}</span></span><span class="pill-active">${me.status === 'active' ? t('active') : esc(me.status || '')}</span></div>
   <div class="acct-row"><span class="acct-ic">${IC.users}</span><span class="acct-row-main"><span class="acct-row-title" style="display:block">${lang === 'en' ? 'Profile picture' : 'صورة البروفايل'}</span><span class="acct-row-sub" style="display:block">${lang === 'en' ? 'Shown on your profile and next to your name' : 'تظهر في بروفايلك وجنب اسمك'}</span></span><span style="display:flex;gap:8px"><input type="file" id="avatar-inp" accept="image/*" style="display:none" onchange="onAvatarFile(this)"><button type="button" class="btn secondary" style="width:auto" onclick="document.getElementById('avatar-inp').click()">${lang === 'en' ? 'Change' : 'تغيير'}</button>${me.avatar ? `<button type="button" class="btn secondary" style="width:auto" onclick="removeAvatar()">${lang === 'en' ? 'Remove' : 'إزالة'}</button>` : ''}</span></div><div id="avatar-err" class="err"></div></div>
+  <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.bell}</span><span class="menu-row-main"><span class="menu-row-title">${lang === 'en' ? 'Browser notifications' : 'إشعارات المتصفح'}</span><span class="menu-row-sub">${lang === 'en' ? 'Get a system notification outside the site when news is published' : 'يصلك إشعار خارج الموقع عند نشر خبر جديد'}</span></span></div><div id="push-card"><p class="muted">…</p></div></div>
   ${me.frozenAll ? `<div class="profile-card" style="border:1.5px solid var(--danger)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'All assets frozen' : 'كل الأصول مجمدة'}</div><p class="muted" style="margin:0">${lang === 'en' ? 'The admin has frozen all your assets — no outgoing operations are possible until the admin releases the freeze.' : 'الأدمن جمّد كل أصولك — لا يمكن إجراء أي عملية صادرة حتى يفك الأدمن التجميد.'}</p></div>` : ((me.frozenSdg || 0) > 0 ? `<div class="profile-card" style="border:1.5px solid var(--danger)"><div class="page-title" style="margin:0 0 6px">${lang === 'en' ? 'Amount frozen' : 'مبلغ مجمد'}</div><p class="muted" style="margin:0">${lang === 'en' ? `Frozen by admin: ${moneySdg(me.frozenSdg)} — your usable balance is your balance minus the frozen amount.` : `مبلغ مجمد من الأدمن: ${moneySdg(me.frozenSdg)} — رصيدك المتاح هو رصيدك ناقص المبلغ المجمد.`}</p></div>` : '')}
   <div class="profile-card"><div class="menu-row" style="cursor:default"><span class="acct-ic">${IC.users}</span><span class="menu-row-main"><span class="menu-row-title">${lang === 'en' ? 'Your invite code' : 'رمز الدعوة الخاص بك'}</span></span></div>
   <p class="muted" style="direction:ltr;text-align:center;font-weight:900;font-size:18px;color:#0f766e">WSL${esc(me.sdgAccount || '')}</p>
@@ -949,6 +958,14 @@ function adminView(){
   <div class="page-title" style="margin-top:18px">${lang === 'en' ? `3 — Accounts (${shown.length} of ${all.length})` : `٣ — الحسابات (${shown.length} من ${all.length})`}</div>${users}
   <div class="page-title" style="margin-top:18px">${lang === 'en' ? '4 — Transfer and transaction log' : '٤ — سجل التحويل والمعاملات'}</div>
   <div class="card">${txRows}</div>
+  <div class="page-title" style="margin-top:18px">${lang === 'en' ? '5 — News and announcements' : '٥ — الأخبار والإعلانات'}</div>
+  <div class="card"><h2>${lang === 'en' ? 'Publish news or an announcement' : 'نشر خبر أو إعلان'}</h2>
+  <p class="muted">${lang === 'en' ? 'Published items appear in the news section for all users, newest first, and send a browser push notification to subscribers.' : 'العناصر المنشورة تظهر في قسم الأخبار لكل المستخدمين، الأحدث أولاً، وتُرسل إشعار متصفح للمشتركين.'}</p>
+  <label>${lang === 'en' ? 'Title' : 'العنوان'}</label><input id="nw-title">
+  <label>${lang === 'en' ? 'Text' : 'النص'}</label><textarea id="nw-body" rows="4"></textarea>
+  <label>${lang === 'en' ? 'Date' : 'التاريخ'}</label><input id="nw-date" type="date">
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" style="width:auto" onclick="submitNews()">${lang === 'en' ? 'Publish' : 'نشر'}</button><button class="btn secondary" style="width:auto" onclick="cancelNewsEdit()">${lang === 'en' ? 'Clear' : 'مسح'}</button></div><div id="nw-err" class="err"></div><div id="nw-ok" class="ok"></div>
+  <div id="admin-news-list" style="margin-top:14px"><p class="muted">…</p></div></div>
   `;
 }
 function securityView(){
@@ -1058,6 +1075,7 @@ function render(){
   else if (view === 'invest') html = investView();
   else if (view === 'receipt') html = receiptView();
   else if (view === 'admin') html = adminView();
+  else if (view === 'news') html = newsView();
   else if (view === 'security') html = securityView();
   else if (view === 'services') html = servicesView();
   else if (view === 'account') html = accountView();
@@ -1113,6 +1131,10 @@ function render(){
   if (view === 'scan') startScan();
   if (view === 'transfer' && window._pendingTo) { const p = window._pendingTo; window._pendingTo = ''; const inp = $('#tr-to'); if (inp) { inp.value = p; lookupAcc(); } }
   if (view === 'invest') loadInvest();
+  if (view === 'home') loadHomeNews();
+  if (view === 'news') loadNews();
+  if (view === 'account') loadPushCard();
+  if (view === 'admin') loadAdminNews();
   if (view === 'deposits') loadDeposits();
   if (view === 'bills') loadBills();
   if (view === 'goals') loadGoals();
@@ -1233,6 +1255,87 @@ async function doDeposit(){
   try { const j = await api('/api/deposits', { method:'POST', body: JSON.stringify({ principal: $('#dp-amt').value, durationDays: $('#dp-days').value }) });
     $('#dp-ok').textContent = `Rate ${Math.round(j.deposit.rate*100)}% — Profit ${j.deposit.profit} SDG — Maturity ${new Date(j.deposit.maturityDate).toLocaleDateString()} — Total ${j.deposit.total}`; await loadDash(); }
   catch(e){ $('#dp-err').textContent = e.message; }
+}
+function newsView(){
+  return `${backLink(t('backHome'), 'home')}
+  <div class="page-title">${lang === 'en' ? 'News and announcements' : 'الأخبار والإعلانات'}</div>
+  <div id="news-list" class="card"><p class="muted">…</p></div>`;
+}
+async function loadNews(){
+  const el = $('#news-list'); if (!el) return;
+  try {
+    const j = await api('/api/news');
+    el.innerHTML = (j.news || []).map(n => `<div class="row" style="display:block"><div style="font-weight:800">${esc(n.title)}</div><div class="muted">${esc(n.date || '')}</div><div style="white-space:pre-wrap;margin-top:6px">${esc(n.body)}</div></div>`).join('') || `<p class="muted">${lang === 'en' ? 'No news yet' : 'لا توجد أخبار بعد'}</p>`;
+  } catch(e){ el.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+async function loadHomeNews(){
+  const el = $('#home-news'); if (!el) return;
+  try {
+    const j = await api('/api/news');
+    const n = (j.news || [])[0];
+    el.innerHTML = n ? `<div class="ops-head"><h2>${lang === 'en' ? 'News and announcements' : 'الأخبار والإعلانات'}</h2><button type="button" class="link-btn" onclick="go('news')">${lang === 'en' ? 'Show all' : 'عرض الكل'}</button></div><div style="font-weight:800">${esc(n.title)}</div><div class="muted">${esc(n.snippet || '')}</div>` : `<div class="ops-head"><h2>${lang === 'en' ? 'News and announcements' : 'الأخبار والإعلانات'}</h2><button type="button" class="link-btn" onclick="go('news')">${lang === 'en' ? 'Show all' : 'عرض الكل'}</button></div><p class="muted">${lang === 'en' ? 'No news yet' : 'لا توجد أخبار بعد'}</p>`;
+  } catch(e){ el.innerHTML = `<p class="muted">${lang === 'en' ? 'News unavailable' : 'الأخبار غير متاحة'}</p>`; }
+}
+async function loadAdminNews(){
+  const el = $('#admin-news-list'); if (!el) return;
+  try {
+    const j = await api('/api/news');
+    el.innerHTML = (j.news || []).map(n => `<div class="row"><span><b>${esc(n.title)}</b><br><span class="muted">${esc(n.date || '')} — ${esc(n.snippet || '')}</span></span><span style="display:flex;gap:6px"><button class="btn secondary" style="width:auto;padding:8px 12px;min-height:0" onclick="editNews(${n.id})">${lang === 'en' ? 'Edit' : 'تعديل'}</button><button class="btn-outline-danger" style="width:auto;padding:8px 12px;min-height:0" onclick="deleteNews(${n.id})">${lang === 'en' ? 'Delete' : 'حذف'}</button></span></div>`).join('') || `<p class="muted">${lang === 'en' ? 'No news yet' : 'لا توجد أخبار بعد'}</p>`;
+  } catch(e){ el.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+function cancelNewsEdit(){ window._newsEditId = null; const t = $('#nw-title'), b = $('#nw-body'), d = $('#nw-date'); if (t) t.value = ''; if (b) b.value = ''; if (d) d.value = new Date().toISOString().slice(0, 10); const ok = $('#nw-ok'); if (ok) ok.textContent = ''; }
+async function submitNews(){
+  const title = $('#nw-title') ? $('#nw-title').value.trim() : '', body = $('#nw-body') ? $('#nw-body').value.trim() : '', date = $('#nw-date') ? $('#nw-date').value : '';
+  const errEl = $('#nw-err'), okEl = $('#nw-ok'); if (errEl) errEl.textContent = ''; if (okEl) okEl.textContent = '';
+  try {
+    if (window._newsEditId) { await api('/api/admin/news/edit', { method:'POST', body: JSON.stringify({ id: window._newsEditId, title, body, date }) }); if (okEl) okEl.textContent = lang === 'en' ? 'News updated' : 'تم تحديث الخبر'; }
+    else { await api('/api/admin/news', { method:'POST', body: JSON.stringify({ title, body, date }) }); if (okEl) okEl.textContent = lang === 'en' ? 'News published — subscribers were notified' : 'تم نشر الخبر — وُصل إشعار للمشتركين'; }
+    cancelNewsEdit(); loadAdminNews();
+  } catch(e){ if (errEl) errEl.textContent = friendlyErr(e.message); }
+}
+async function editNews(id){
+  try {
+    const j = await api('/api/news'); const n = (j.news || []).find(x => x.id === id); if (!n) return;
+    window._newsEditId = id;
+    const t = $('#nw-title'), b = $('#nw-body'), d = $('#nw-date');
+    if (t) t.value = n.title; if (b) b.value = n.body; if (d) d.value = n.date || '';
+    const okEl = $('#nw-ok'); if (okEl) okEl.textContent = lang === 'en' ? 'Editing — press Publish to save' : 'وضع التعديل — اضغط نشر للحفظ';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch(e){ toast(friendlyErr(e.message), 'err'); }
+}
+async function deleteNews(id){
+  if (!(await confirmSheet({ title: lang === 'en' ? 'Delete this news item?' : 'حذف هذا الخبر؟', confirmLabel: lang === 'en' ? 'Delete' : 'حذف', danger: true }))) return;
+  try { await api('/api/admin/news/delete', { method:'POST', body: JSON.stringify({ id }) }); loadAdminNews(); } catch(e){ toast(friendlyErr(e.message), 'err'); }
+}
+async function loadPushCard(){
+  const el = $('#push-card'); if (!el) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { el.innerHTML = `<p class="muted">${lang === 'en' ? 'Browser notifications are not supported in this browser.' : 'إشعارات المتصفح غير مدعومة في هذا المتصفح.'}</p>`; return; }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    if (sub) el.innerHTML = `<p class="muted">${lang === 'en' ? 'Browser notifications are ON for this device — you will get a system notification outside the site when news is published.' : 'إشعارات المتصفح مفعّلة على هذا الجهاز — سيصلك إشعار خارج الموقع عند نشر خبر جديد.'}</p><button class="btn secondary" onclick="disablePush()">${lang === 'en' ? 'Turn off' : 'إيقاف'}</button>`;
+    else el.innerHTML = `<p class="muted">${lang === 'en' ? 'Turn on browser notifications to get a system notification outside the site when news is published.' : 'فعّل إشعارات المتصفح ليصلك إشعار خارج الموقع عند نشر خبر جديد.'}</p><button class="btn" onclick="enablePush()">${lang === 'en' ? 'Enable browser notifications' : 'تفعيل إشعارات المتصفح'}</button>`;
+  } catch(e){ el.innerHTML = `<p class="err">${esc(friendlyErr(e.message))}</p>`; }
+}
+async function enablePush(){
+  const el = $('#push-card'); if (el) el.innerHTML = `<p class="muted">…</p>`;
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { if (el) el.innerHTML = `<p class="muted">${lang === 'en' ? 'Permission was not granted — allow notifications for this site in your browser settings, then try again.' : 'لم يُمنح الإذن — اسمح بالإشعارات لهذا الموقع من إعدادات المتصفح ثم حاول مجدداً.'}</p>`; return; }
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY) });
+    await api('/api/push/subscribe', { method:'POST', body: JSON.stringify({ subscription: sub.toJSON() }) });
+    toast(lang === 'en' ? 'Browser notifications enabled' : 'تم تفعيل إشعارات المتصفح');
+    go('account');
+  } catch(e){ toast(friendlyErr(e.message), 'err'); loadPushCard(); }
+}
+async function disablePush(){
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    if (sub) { await api('/api/push/unsubscribe', { method:'POST', body: JSON.stringify({ endpoint: sub.endpoint }) }); await sub.unsubscribe(); }
+    go('account');
+  } catch(e){ toast(friendlyErr(e.message), 'err'); }
 }
 async function cancelDeposit(id, principal){
   if (!(await confirmSheet({ title: lang === 'en' ? 'Cancel deposit' : 'إلغاء الوديعة', lines: [[lang === 'en' ? 'Principal refunded in full' : 'أصل المبلغ المسترد كاملاً', moneySdg(principal)]], note: lang === 'en' ? 'Accrued profit is forfeited and no fee is charged.' : 'الأرباح المستحقة تُلغى ولا تُدفع، ومن غير أي رسوم.', confirmLabel: lang === 'en' ? 'Cancel deposit' : 'إلغاء الوديعة', danger: true }))) return;
@@ -1496,6 +1599,8 @@ function downloadReceipt(){
   })();
 }
 (async () => {
+  try { const v = new URLSearchParams(window.location.search).get('view'); if (v === 'news') { window._pendingView = 'news'; history.replaceState(null, '', window.location.pathname); } } catch {}
+  if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('/sw.js'); } catch {} }
   const splash = document.getElementById('splash');
   if (splash && lang === 'en') { const sn = splash.querySelector('.splash-name'); if (sn) sn.textContent = 'Wassil'; const st = splash.querySelector('.splash-tag'); if (st) st.textContent = 'Your money arrives... easily'; }
   try { const to = new URLSearchParams(window.location.search).get('to'); if (to) window._pendingTo = to; } catch {}
@@ -1508,7 +1613,7 @@ function downloadReceipt(){
       // up), retry once before giving up — otherwise a valid saved login
       // looks like a lost account.
       if (!me) { await new Promise(r => setTimeout(r, 3000)); await loadDash(); }
-      if (me) { view = 'home'; render(); }
+      if (me) { view = window._pendingView || 'home'; window._pendingView = ''; render(); }
     }
   }, 1200);
 })();
