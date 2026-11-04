@@ -1599,7 +1599,7 @@ function downloadReceipt(){
   })();
 }
 (async () => {
-  try { const v = new URLSearchParams(window.location.search).get('view'); if (v === 'news') { window._pendingView = 'news'; history.replaceState(null, '', window.location.pathname); } } catch {}
+  try { const v = new URLSearchParams(window.location.search).get('view'); if (v === 'news' || v === 'account') { window._pendingView = v; history.replaceState(null, '', window.location.pathname); } } catch {}
   if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('/sw.js'); } catch {} }
   const splash = document.getElementById('splash');
   if (splash && lang === 'en') { const sn = splash.querySelector('.splash-name'); if (sn) sn.textContent = 'Wassil'; const st = splash.querySelector('.splash-tag'); if (st) st.textContent = 'Your money arrives... easily'; }
